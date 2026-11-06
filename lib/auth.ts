@@ -47,7 +47,7 @@ export function getAuth() {
       window: 60,
       max: 10,
     },
-  });
+  }) as ReturnType<typeof betterAuth>;
 
   return authInstance!;
 }

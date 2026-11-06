@@ -10,7 +10,8 @@
     "typecheck": "tsc --noEmit",
     "db:auth:migrate": "npx auth@latest migrate --yes",
     "db:app:migrate": "psql \"$DATABASE_URL\" -f db/schema.sql",
-    "db:migrate": "node scripts/migrate-db.mjs"
+    "db:migrate": "node scripts/migrate-db.mjs",
+    "prebuild": "node scripts/migrate-db.mjs"
   },
   "dependencies": {
     "@ai-sdk/react": "^3.0.0",

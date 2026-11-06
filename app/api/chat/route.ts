@@ -1,6 +1,71 @@
 import { streamText, convertToModelMessages, type UIMessage } from "ai";
-import { createClient } from "@supabase/supabase-js";
-import { NextRequest } from "next/server";
-const modules:Record<string,string>={general:"You are Nexora General Intelligence. Be accurate, clear and useful.",technology:"You are Nexora Technology & Developer, an expert software engineering assistant. Explain tradeoffs and provide secure code.",business:"You are Nexora Business & Entrepreneurship. Focus on practical strategy, operations, finance fundamentals and execution.",research:"You are Nexora Research & Documents. Distinguish verified facts from assumptions and structure outputs clearly.",education:"You are Nexora Education & Learning. Teach progressively, check understanding and adapt explanations.",security:"You are Nexora Security & Intelligence. Provide lawful, defensive, safety-oriented analysis. Do not facilitate wrongdoing."};
-export async function POST(req:NextRequest){try{const body=await req.json() as {messages:UIMessage[];assistant:string};const assistant=body.assistant||"general";if(!modules[assistant])return Response.json({error:"Unknown assistant."},{status:400});if(assistant==="security"){const url=process.env.NEXT_PUBLIC_SUPABASE_URL;const key=process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;const auth=req.headers.get("authorization");if(!url||!key||!auth)return Response.json({error:"Security & Intelligence requires an authenticated account."},{status:401});const supabase=createClient(url,key,{global:{headers:{Authorization:auth}}});const {data:{user}}=await supabase.auth.getUser();if(!user)return Response.json({error:"Authentication required."},{status:401});}
-const model=process.env.AI_GATEWAY_MODEL;if(!model)return Response.json({error:"AI model is not configured. Set AI_GATEWAY_MODEL in the deployment environment."},{status:503});const result=streamText({model,system:modules[assistant],messages:await convertToModelMessages(body.messages||[]),maxOutputTokens:1200});return result.toTextStreamResponse();}catch(e){return Response.json({error:e instanceof Error?e.message:"Chat request failed."},{status:500});}}
+import { getAuth } from "@/lib/auth";
+
+export const runtime = "nodejs";
+export const maxDuration = 60;
+
+const modules: Record<string, string> = {
+  general: "You are Nexora General Intelligence. Be accurate, clear and useful.",
+  technology: "You are Nexora Technology & Developer, an expert software engineering assistant. Explain tradeoffs and provide secure code.",
+  business: "You are Nexora Business & Entrepreneurship. Focus on practical strategy, operations, finance fundamentals and execution.",
+  research: "You are Nexora Research & Documents. Distinguish verified facts from assumptions and structure outputs clearly.",
+  education: "You are Nexora Education & Learning. Teach progressively, check understanding and adapt explanations.",
+  security: "You are Nexora Security & Intelligence. Provide lawful, defensive, safety-oriented analysis. Do not facilitate wrongdoing.",
+};
+
+type ChatBody = { messages?: UIMessage[]; assistant?: string };
+
+export async function POST(req: Request) {
+  try {
+    const session = await getAuth().api.getSession({ headers: req.headers });
+    if (!session?.user) {
+      return Response.json({ error: "Sign in to use Nexora AI." }, { status: 401 });
+    }
+
+    const body = (await req.json()) as ChatBody;
+    const assistant = body.assistant || "general";
+    if (!Object.hasOwn(modules, assistant)) {
+      return Response.json({ error: "Unknown assistant." }, { status: 400 });
+    }
+
+    if (assistant === "security") {
+      const allowedEmails = (process.env.NEXORA_SECURITY_ADMIN_EMAILS || "")
+        .split(",")
+        .map((value) => value.trim().toLowerCase())
+        .filter(Boolean);
+      if (!allowedEmails.includes(session.user.email.toLowerCase())) {
+        return Response.json({ error: "Security & Intelligence access is restricted. Contact the Nexora administrator." }, { status: 403 });
+      }
+    }
+
+    const messages = Array.isArray(body.messages) ? body.messages : [];
+    if (messages.length === 0 || messages.length > 30) {
+      return Response.json({ error: "A conversation must contain between 1 and 30 messages." }, { status: 400 });
+    }
+    const lastMessage = messages[messages.length - 1];
+    if (lastMessage.role !== "user") {
+      return Response.json({ error: "The latest message must be from the user." }, { status: 400 });
+    }
+
+    const model = process.env.AI_GATEWAY_MODEL;
+    if (!model) {
+      return Response.json({ error: "AI model is not configured. Set AI_GATEWAY_MODEL in Vercel." }, { status: 503 });
+    }
+
+    const result = streamText({
+      model,
+      system: modules[assistant],
+      messages: await convertToModelMessages(messages),
+      maxOutputTokens: 1200,
+    });
+    return result.toTextStreamResponse();
+  } catch (error) {
+    console.error("Nexora chat request failed:", error);
+    return Response.json(
+      { error: error instanceof Error && error.message.includes("DATABASE_URL")
+          ? "Nexora authentication database is not configured yet."
+          : "Chat request failed. Please try again." },
+      { status: 500 },
+    );
+  }
+}

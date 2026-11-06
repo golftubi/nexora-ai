@@ -1,0 +1,1 @@
+import type { Metadata } from "next"; import "./globals.css"; export const metadata: Metadata = { title: "Nexora AI | One Platform. Multiple Intelligences.", description: "A modular AI workspace with specialist assistants." }; export default function RootLayout({children}:{children:React.ReactNode}) { return <html lang="en"><body>{children}</body></html>; }

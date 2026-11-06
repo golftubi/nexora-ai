@@ -3,10 +3,10 @@ import { betterAuth } from "better-auth";
 import { Pool } from "pg";
 
 let pool: Pool | undefined;
-let authInstance: ReturnType<typeof betterAuth> | undefined;
+let authInstance: unknown;
 
 export function getAuth() {
-  if (authInstance) return authInstance;
+  if (authInstance) return authInstance as ReturnType<typeof betterAuth>;
 
   const connectionString = process.env.DATABASE_URL;
   const secret = process.env.BETTER_AUTH_SECRET;
@@ -47,7 +47,7 @@ export function getAuth() {
       window: 60,
       max: 10,
     },
-  }) as ReturnType<typeof betterAuth>;
+  });
 
-  return authInstance!;
+  return authInstance as ReturnType<typeof betterAuth>;
 }

@@ -8,12 +8,10 @@ if (!shouldMigrate) {
   process.exit(0);
 }
 
-if (!process.env.DATABASE_URL) {
-  throw new Error("DATABASE_URL is required to run Nexora database migrations.");
-}
+if (!process.env.DATABASE_URL) throw new Error("DATABASE_URL is required to run Nexora database migrations.");
 
 console.log("Applying Better Auth PostgreSQL schema...");
-execFileSync("npx", ["auth@latest", "migrate", "--yes"], { stdio: "inherit", env: process.env });
+execFileSync("npx", ["auth@1.7.18", "migrate", "--config", "./lib/auth.ts", "--yes"], { stdio: "inherit", env: process.env });
 
 console.log("Applying Nexora application schema...");
 const pool = new Pool({ connectionString: process.env.DATABASE_URL, max: 1 });

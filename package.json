@@ -8,7 +8,7 @@
     "start": "next start",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
-    "db:auth:migrate": "npx auth@latest migrate --yes",
+    "db:auth:migrate": "npx auth@1.7.18 migrate --config ./lib/auth.ts --yes",
     "db:app:migrate": "psql \"$DATABASE_URL\" -f db/schema.sql",
     "db:migrate": "node scripts/migrate-db.mjs",
     "prebuild": "node scripts/migrate-db.mjs"

@@ -20,10 +20,21 @@ export function getAuth() {
     ssl: connectionString.includes("sslmode=require") ? { rejectUnauthorized: false } : undefined,
   });
 
-  const trustedOrigins = [
+  const originValues = [
     process.env.BETTER_AUTH_URL,
     process.env.NEXT_PUBLIC_APP_URL,
-  ].filter((value): value is string => Boolean(value));
+    process.env.VERCEL_URL,
+    process.env.VERCEL_PROJECT_PRODUCTION_URL,
+    ...(process.env.BETTER_AUTH_TRUSTED_ORIGINS ?? "").split(","),
+  ];
+
+  const trustedOrigins = [...new Set(
+    originValues
+      .map((value) => value?.trim())
+      .filter((value): value is string => Boolean(value))
+      .map((value) => value.startsWith("http://") || value.startsWith("https://") ? value : `https://${value}`)
+      .map((value) => value.replace(/\/$/, "")),
+  )];
 
   authInstance = betterAuth({
     database: pool,

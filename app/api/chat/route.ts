@@ -1,4 +1,4 @@
-import { streamText, convertToModelMessages, type UIMessage } from "ai";
+import { streamText } from "ai";
 import { getAuth } from "@/lib/auth";
 
 export const runtime = "nodejs";
@@ -13,49 +13,53 @@ const modules: Record<string, string> = {
   security: "You are Nexora Security & Intelligence. Provide lawful, defensive, safety-oriented analysis. Do not facilitate wrongdoing.",
 };
 
-type ChatBody = { messages?: UIMessage[]; assistant?: string };
+type ChatMessage = { role: "user" | "assistant"; content: string };
+type ChatBody = { messages?: unknown; assistant?: string };
 
 export async function POST(req: Request) {
   try {
     const session = await getAuth().api.getSession({ headers: req.headers });
-    if (!session?.user) {
-      return Response.json({ error: "Sign in to use Nexora AI." }, { status: 401 });
-    }
+    if (!session?.user) return Response.json({ error: "Sign in to use Nexora AI." }, { status: 401 });
 
     const body = (await req.json()) as ChatBody;
     const assistant = body.assistant || "general";
-    if (!Object.hasOwn(modules, assistant)) {
-      return Response.json({ error: "Unknown assistant." }, { status: 400 });
-    }
+    if (!Object.hasOwn(modules, assistant)) return Response.json({ error: "Unknown assistant." }, { status: 400 });
 
     if (assistant === "security") {
       const allowedEmails = (process.env.NEXORA_SECURITY_ADMIN_EMAILS || "")
-        .split(",")
-        .map((value) => value.trim().toLowerCase())
-        .filter(Boolean);
+        .split(",").map((value) => value.trim().toLowerCase()).filter(Boolean);
       if (!allowedEmails.includes(session.user.email.toLowerCase())) {
         return Response.json({ error: "Security & Intelligence access is restricted. Contact the Nexora administrator." }, { status: 403 });
       }
     }
 
-    const messages = Array.isArray(body.messages) ? body.messages : [];
-    if (messages.length === 0 || messages.length > 30) {
+    if (!Array.isArray(body.messages) || body.messages.length === 0 || body.messages.length > 30) {
       return Response.json({ error: "A conversation must contain between 1 and 30 messages." }, { status: 400 });
     }
-    const lastMessage = messages[messages.length - 1];
-    if (lastMessage.role !== "user") {
+
+    const messages: ChatMessage[] = [];
+    for (const item of body.messages) {
+      if (!item || typeof item !== "object" || !("role" in item) || !("content" in item)) {
+        return Response.json({ error: "Each message must include a role and text content." }, { status: 400 });
+      }
+      const message = item as { role: unknown; content: unknown };
+      if ((message.role !== "user" && message.role !== "assistant") || typeof message.content !== "string" || !message.content.trim() || message.content.length > 20000) {
+        return Response.json({ error: "Messages must contain valid user or assistant text of at most 20,000 characters." }, { status: 400 });
+      }
+      messages.push({ role: message.role, content: message.content });
+    }
+
+    if (messages[messages.length - 1].role !== "user") {
       return Response.json({ error: "The latest message must be from the user." }, { status: 400 });
     }
 
     const model = process.env.AI_GATEWAY_MODEL;
-    if (!model) {
-      return Response.json({ error: "AI model is not configured. Set AI_GATEWAY_MODEL in Vercel." }, { status: 503 });
-    }
+    if (!model) return Response.json({ error: "AI model is not configured. Set AI_GATEWAY_MODEL in Vercel." }, { status: 503 });
 
     const result = streamText({
       model,
       system: modules[assistant],
-      messages: await convertToModelMessages(messages),
+      messages,
       maxOutputTokens: 1200,
     });
     return result.toTextStreamResponse();

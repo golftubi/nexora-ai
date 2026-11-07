@@ -20,7 +20,7 @@ export async function GET(request: Request) {
       db.query("SELECT count(*)::int AS total FROM messages"),
       db.query(`SELECT coalesce(sum(input_tokens),0)::bigint AS "inputTokens",
         coalesce(sum(output_tokens),0)::bigint AS "outputTokens",
-        coalesce(sum(estimated_cost_usd),0)::numeric(14,6)::text AS "estimatedCost",
+        sum(estimated_cost_usd)::numeric(14,6)::text AS "estimatedCost",
         count(*)::int AS requests
         FROM usage_records WHERE created_at >= now() - interval '30 days'`),
       db.query(`SELECT id, name, description, enabled, access_level AS "accessLevel"

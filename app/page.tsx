@@ -152,7 +152,17 @@ export default function Home() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ assistantId: assistant }),
         });
-        if (!created.ok) throw new Error("Unable to create a conversation. Please try again.");
+        if (!created.ok) {
+          const raw = await created.text();
+          let detail = raw;
+          try {
+            const errorPayload = JSON.parse(raw) as { error?: string };
+            detail = errorPayload.error || raw;
+          } catch {
+            // Preserve a plain-text server error if JSON was not returned.
+          }
+          throw new Error(detail || `Unable to create conversation (HTTP ${created.status}).`);
+        }
         const payload = await created.json() as { conversation: { id: string } };
         activeId = payload.conversation.id;
         setConversationId(activeId);

@@ -93,6 +93,23 @@ export async function POST(req: Request) {
               [body.conversationId, session.user.id, text],
             );
           }
+          try {
+            await db.query(
+              `INSERT INTO usage_records
+                (user_id, conversation_id, assistant_id, provider, model, input_tokens, output_tokens)
+               VALUES ($1, $2, $3, 'vercel-ai-gateway', $4, $5, $6)`,
+              [
+                session.user.id,
+                body.conversationId,
+                assistant,
+                model,
+                totalUsage.inputTokens ?? 0,
+                totalUsage.outputTokens ?? 0,
+              ],
+            );
+          } catch (usageError) {
+            console.error("Nexora usage metering failed:", usageError);
+          }
           console.log("Nexora stream finished:", JSON.stringify({ assistant, conversationId: body.conversationId, finishReason, totalUsage }));
         } catch (error) {
           console.error("Nexora assistant message persistence failed:", error);

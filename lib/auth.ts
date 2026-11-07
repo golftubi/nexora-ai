@@ -30,23 +30,15 @@ export function getAuth() {
     secret,
     baseURL: process.env.BETTER_AUTH_URL,
     trustedOrigins,
-    emailAndPassword: {
-      enabled: true,
-      minPasswordLength: 10,
-      maxPasswordLength: 128,
-      requireEmailVerification: false,
-    },
-    session: {
-      cookieCache: { enabled: true, maxAge: 5 * 60 },
-      expiresIn: 60 * 60 * 24 * 30,
-      updateAge: 60 * 60 * 24,
-    },
-    rateLimit: {
-      enabled: true,
-      window: 60,
-      max: 10,
-    },
+    emailAndPassword: { enabled: true, minPasswordLength: 10, maxPasswordLength: 128, requireEmailVerification: false },
+    session: { cookieCache: { enabled: true, maxAge: 5 * 60 }, expiresIn: 60 * 60 * 24 * 30, updateAge: 60 * 60 * 24 },
+    rateLimit: { enabled: true, window: 60, max: 10 },
   });
 
   return authInstance as ReturnType<typeof betterAuth>;
 }
+
+// Better Auth CLI discovers a named auth or default export.
+// Keep the same instance used by the Next.js route handlers.
+export const auth = getAuth();
+export default auth;

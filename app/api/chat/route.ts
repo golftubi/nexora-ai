@@ -1,5 +1,6 @@
 import { streamText } from "ai";
 import { getAuth } from "@/lib/auth";
+import { getDb } from "@/lib/db";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -14,7 +15,7 @@ const modules: Record<string, string> = {
 };
 
 type ChatMessage = { role: "user" | "assistant"; content: string };
-type ChatBody = { messages?: unknown; assistant?: string };
+type ChatBody = { messages?: unknown; assistant?: string; conversationId?: string };
 
 export async function POST(req: Request) {
   try {
@@ -33,6 +34,9 @@ export async function POST(req: Request) {
       }
     }
 
+    if (typeof body.conversationId !== "string" || !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(body.conversationId)) {
+      return Response.json({ error: "A valid conversation ID is required. Start a new conversation and try again." }, { status: 400 });
+    }
     if (!Array.isArray(body.messages) || body.messages.length === 0 || body.messages.length > 30) {
       return Response.json({ error: "A conversation must contain between 1 and 30 messages." }, { status: 400 });
     }
@@ -48,10 +52,30 @@ export async function POST(req: Request) {
       }
       messages.push({ role: message.role, content: message.content });
     }
-
     if (messages[messages.length - 1].role !== "user") {
       return Response.json({ error: "The latest message must be from the user." }, { status: 400 });
     }
+
+    const db = getDb();
+    const owned = await db.query(
+      "SELECT id, assistant_id FROM conversations WHERE id = $1 AND user_id = $2",
+      [body.conversationId, session.user.id],
+    );
+    if (!owned.rowCount) return Response.json({ error: "Conversation not found." }, { status: 404 });
+    if (owned.rows[0].assistant_id !== assistant) return Response.json({ error: "This conversation belongs to a different assistant." }, { status: 409 });
+
+    const latestUserMessage = messages[messages.length - 1].content;
+    await db.query(
+      "INSERT INTO messages (conversation_id, user_id, role, content) VALUES ($1, $2, 'user', $3)",
+      [body.conversationId, session.user.id, latestUserMessage],
+    );
+    const title = latestUserMessage.replace(/\s+/g, " ").trim().slice(0, 80);
+    await db.query(
+      `UPDATE conversations SET updated_at = now(),
+       title = CASE WHEN title = 'New conversation' THEN $2 ELSE title END
+       WHERE id = $1 AND user_id = $3`,
+      [body.conversationId, title || "New conversation", session.user.id],
+    );
 
     const model = process.env.AI_GATEWAY_MODEL;
     if (!model) return Response.json({ error: "AI model is not configured. Set AI_GATEWAY_MODEL in Vercel." }, { status: 503 });
@@ -61,16 +85,20 @@ export async function POST(req: Request) {
       system: modules[assistant],
       messages,
       maxOutputTokens: 8192,
-      onFinish: ({ finishReason, totalUsage }) => {
-        console.log("Nexora stream finished:", JSON.stringify({
-          assistant,
-          finishReason,
-          totalUsage,
-        }));
+      onFinish: async ({ text, finishReason, totalUsage }) => {
+        try {
+          if (text.trim()) {
+            await db.query(
+              "INSERT INTO messages (conversation_id, user_id, role, content) VALUES ($1, $2, 'assistant', $3)",
+              [body.conversationId, session.user.id, text],
+            );
+          }
+          console.log("Nexora stream finished:", JSON.stringify({ assistant, conversationId: body.conversationId, finishReason, totalUsage }));
+        } catch (error) {
+          console.error("Nexora assistant message persistence failed:", error);
+        }
       },
-      onError: ({ error }) => {
-        console.error("Nexora stream error:", error);
-      },
+      onError: ({ error }) => console.error("Nexora stream error:", error),
     });
     return result.toTextStreamResponse();
   } catch (error) {

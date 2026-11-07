@@ -38,23 +38,37 @@ export default function Home() {
         body: JSON.stringify({ assistant, messages: next }),
       });
       if (!response.ok) {
-        const payload = await response.json();
-        throw new Error(payload.error || "Request failed");
+        const raw = await response.text();
+        let detail = raw;
+        try {
+          const payload = JSON.parse(raw) as { error?: string };
+          detail = payload.error || raw;
+        } catch {
+          // Keep the raw response when the server did not return JSON.
+        }
+        throw new Error(detail || `Nexora request failed (HTTP ${response.status}).`);
       }
+
       const reader = response.body?.getReader();
+      if (!reader) throw new Error("Nexora returned an empty response stream. Please try again.");
       const decoder = new TextDecoder();
       let answer = "";
-      setMessages([...next, { role: "assistant", content: "" }]);
-      if (reader) {
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
-          answer += decoder.decode(value, { stream: true });
-          setMessages([...next, { role: "assistant", content: answer }]);
-        }
+      setMessages([...next, { role: "assistant", content: "Nexora is thinking…" }]);
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        answer += decoder.decode(value, { stream: true });
+        setMessages([...next, { role: "assistant", content: answer || "Nexora is thinking…" }]);
       }
+      answer += decoder.decode();
+      if (!answer.trim()) {
+        throw new Error("Nexora received no answer from the AI service. Please try again in a moment.");
+      }
+      setMessages([...next, { role: "assistant", content: answer }]);
     } catch (error) {
-      setMessages([...next, { role: "assistant", content: error instanceof Error ? error.message : "Unable to reach Nexora AI." }]);
+      const message = error instanceof Error ? error.message : "Unable to reach Nexora AI.";
+      setMessages([...next, { role: "assistant", content: `Unable to complete this response: ${message}` }]);
     } finally {
       setBusy(false);
     }

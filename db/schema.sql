@@ -93,3 +93,14 @@ CREATE TABLE IF NOT EXISTS audit_logs (
 );
 
 CREATE INDEX IF NOT EXISTS audit_logs_created_idx ON audit_logs (created_at DESC);
+
+
+-- Server-authorized Nexora administrators. Initial super-admins are bootstrapped
+-- from NEXORA_ADMIN_EMAILS and then stored here for role/status management.
+CREATE TABLE IF NOT EXISTS admin_users (
+  user_id text PRIMARY KEY REFERENCES "user"(id) ON DELETE CASCADE,
+  role text NOT NULL DEFAULT 'admin' CHECK (role IN ('super_admin','admin','support','analyst')),
+  is_active boolean NOT NULL DEFAULT true,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  updated_at timestamptz NOT NULL DEFAULT now()
+);

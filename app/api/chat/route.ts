@@ -60,7 +60,17 @@ export async function POST(req: Request) {
       model,
       system: modules[assistant],
       messages,
-      maxOutputTokens: 1200,
+      maxOutputTokens: 1600,
+      onFinish: ({ finishReason, totalUsage }) => {
+        console.log("Nexora stream finished:", JSON.stringify({
+          assistant,
+          finishReason,
+          totalUsage,
+        }));
+      },
+      onError: ({ error }) => {
+        console.error("Nexora stream error:", error);
+      },
     });
     return result.toTextStreamResponse();
   } catch (error) {

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { authClient } from "@/lib/auth-client";
 
@@ -108,7 +108,33 @@ export default function Home() {
   const [input, setInput] = useState("");
   const [messages, setMessages] = useState<{ role: string; content: string }[]>([]);
   const [busy, setBusy] = useState(false);
+  const [conversationId, setConversationId] = useState<string | null>(null);
+  const [conversations, setConversations] = useState<{ id: string; assistantId: string; title: string; updatedAt: string }[]>([]);
   const { data: session, isPending } = authClient.useSession();
+
+  async function refreshConversations() {
+    const response = await fetch("/api/conversations", { cache: "no-store" });
+    if (!response.ok) return;
+    const data = await response.json() as { conversations?: typeof conversations };
+    setConversations(data.conversations || []);
+  }
+
+  useEffect(() => {
+    if (session?.user) void refreshConversations();
+    else { setConversations([]); setConversationId(null); setMessages([]); }
+  }, [session?.user?.id]);
+
+  async function openConversation(id: string) {
+    const response = await fetch(`/api/conversations/${id}`, { cache: "no-store" });
+    if (!response.ok) return;
+    const data = await response.json() as {
+      conversation: { id: string; assistantId: string };
+      messages: { role: string; content: string }[];
+    };
+    setConversationId(data.conversation.id);
+    setAssistant(data.conversation.assistantId);
+    setMessages(data.messages.map((message) => ({ role: message.role, content: message.content })));
+  }
 
   async function send() {
     if (!input.trim() || busy) return;
@@ -118,6 +144,23 @@ export default function Home() {
     }
     const text = input;
     setInput("");
+    let activeId = conversationId;
+    try {
+      if (!activeId) {
+        const created = await fetch("/api/conversations", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ assistantId: assistant }),
+        });
+        if (!created.ok) throw new Error("Unable to create a conversation. Please try again.");
+        const payload = await created.json() as { conversation: { id: string } };
+        activeId = payload.conversation.id;
+        setConversationId(activeId);
+      }
+    } catch (error) {
+      setMessages([...messages, { role: "assistant", content: error instanceof Error ? error.message : "Unable to create conversation." }]);
+      return;
+    }
     const next = [...messages, { role: "user", content: text }];
     setMessages(next);
     setBusy(true);
@@ -125,7 +168,7 @@ export default function Home() {
       const response = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ assistant, messages: next }),
+        body: JSON.stringify({ assistant, messages: next, conversationId: activeId }),
       });
       if (!response.ok) {
         const raw = await response.text();
@@ -154,6 +197,7 @@ export default function Home() {
       answer += decoder.decode();
       if (!answer.trim()) throw new Error("Nexora received no answer from the AI service. Please try again in a moment.");
       setMessages([...next, { role: "assistant", content: answer }]);
+      void refreshConversations();
     } catch (error) {
       const message = error instanceof Error ? error.message : "Unable to reach Nexora AI.";
       setMessages([...next, { role: "assistant", content: `Unable to complete this response: ${message}` }]);
@@ -165,17 +209,34 @@ export default function Home() {
   async function signOut() {
     await authClient.signOut();
     setMessages([]);
+    setConversationId(null);
+    setConversations([]);
+  }
+
+  function startNewConversation() {
+    setMessages([]);
+    setConversationId(null);
   }
 
   return (
     <main className="shell">
       <aside className="sidebar">
         <div className="brand"><span className="brandmark">N</span><div><b>NEXORA</b><small>ARTIFICIAL INTELLIGENCE</small></div></div>
-        <button className="new" onClick={() => setMessages([])}>＋ New conversation</button>
+        <button className="new" onClick={startNewConversation}>＋ New conversation</button>
         <p className="eyebrow">YOUR WORKSPACE</p>
         <p className="navactive">◉　AI Workspace</p>
+        {session?.user && conversations.length > 0 && <>
+          <p className="eyebrow">RECENT CONVERSATIONS</p>
+          <div className="conversation-history">{conversations.map((item) =>
+            <button key={item.id} className={conversationId === item.id ? "history-item active" : "history-item"}
+              onClick={() => void openConversation(item.id)}>
+              <span>{assistants.find((a) => a.id === item.assistantId)?.name || "Nexora AI"}</span>
+              <small>{item.title}</small>
+            </button>
+          )}</div>
+        </>}
         <p className="eyebrow">SPECIALIST ASSISTANTS</p>
-        {assistants.map((item) => <button key={item.id} className={assistant === item.id ? "assistant selected" : "assistant"} onClick={() => setAssistant(item.id)}><span>{item.icon}</span><span>{item.name}</span></button>)}
+        {assistants.map((item) => <button key={item.id} className={assistant === item.id ? "assistant selected" : "assistant"} onClick={() => { setAssistant(item.id); startNewConversation(); }}><span>{item.icon}</span><span>{item.name}</span></button>)}
         <div className="sidebarfoot">One Platform.<br />Multiple Intelligences.</div>
       </aside>
       <section className="main">

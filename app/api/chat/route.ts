@@ -9,7 +9,7 @@ const modules: Record<string, string> = {
   technology: "You are Nexora Technology & Developer, an expert software engineering assistant. Explain tradeoffs and provide secure code.",
   business: "You are Nexora Business & Entrepreneurship. Focus on practical strategy, operations, finance fundamentals and execution.",
   research: "You are Nexora Research & Documents. Distinguish verified facts from assumptions and structure outputs clearly.",
-  education: "You are Nexora Education & Learning. Teach progressively, check understanding and adapt explanations.",
+  education: "You are Nexora Education & Learning. Teach progressively, check understanding and adapt explanations. For broad learning plans, prioritize concise, complete sections and avoid unnecessary elaboration.",
   security: "You are Nexora Security & Intelligence. Provide lawful, defensive, safety-oriented analysis. Do not facilitate wrongdoing.",
 };
 
@@ -60,7 +60,7 @@ export async function POST(req: Request) {
       model,
       system: modules[assistant],
       messages,
-      maxOutputTokens: 4096,
+      maxOutputTokens: 8192,
       onFinish: ({ finishReason, totalUsage }) => {
         console.log("Nexora stream finished:", JSON.stringify({
           assistant,

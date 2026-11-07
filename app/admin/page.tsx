@@ -10,7 +10,7 @@ type DashboardData = {
     users: { total: number; newThisMonth: number };
     conversations: { total: number; last30Days: number };
     messages: { total: number };
-    usage: { inputTokens: number; outputTokens: number; estimatedCost: string; requests: number };
+    usage: { inputTokens: number; outputTokens: number; estimatedCost: string | null; requests: number };
   };
   assistants: { id: string; name: string; description: string; enabled: boolean; accessLevel: string }[];
   recentUsers: { id: string; name: string | null; email: string; createdAt: string }[];

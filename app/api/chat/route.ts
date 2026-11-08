@@ -1,6 +1,7 @@
 import { streamText } from "ai";
 import { getAuth } from "@/lib/auth";
 import { getDb } from "@/lib/db";
+import { ensureFreeSubscription, reserveFreeMessage } from "@/lib/free-plan";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -22,6 +23,7 @@ export async function POST(req: Request) {
     const session = await getAuth().api.getSession({ headers: req.headers });
     if (!session?.user) return Response.json({ error: "Sign in to use Nexora AI." }, { status: 401 });
 
+    await ensureFreeSubscription(session.user.id);
     const body = (await req.json()) as ChatBody;
     const assistant = body.assistant || "general";
     if (!Object.hasOwn(modules, assistant)) return Response.json({ error: "Unknown assistant." }, { status: 400 });
@@ -65,6 +67,8 @@ export async function POST(req: Request) {
     );
     if (!owned.rowCount) return Response.json({ error: "Conversation not found." }, { status: 404 });
     if (owned.rows[0].assistant_id !== assistant) return Response.json({ error: "This conversation belongs to a different assistant." }, { status: 409 });
+    const quota = await reserveFreeMessage(session.user.id);
+    if (!quota.allowed) return Response.json({ error: "You have reached your Nexora Free daily allowance of " + quota.limit + " messages. Your allowance refreshes at 00:00 UTC.", code: "DAILY_LIMIT_REACHED", usage: quota }, { status: 429 });
 
     const latestUserMessage = messages[messages.length - 1].content;
     await db.query(
@@ -79,12 +83,17 @@ export async function POST(req: Request) {
       [body.conversationId, title || "New conversation", session.user.id],
     );
 
+    const projectContext = await db.query("SELECT p.name, p.description, p.instructions FROM projects p JOIN conversations c ON c.project_id = p.id WHERE c.id = $1 AND p.user_id = $2", [body.conversationId, session.user.id]);
+    const project = projectContext.rows[0];
+    const systemPrompt = project
+      ? modules[assistant] + "\n\nProject context: You are working within the user's Project \"" + project.name + "\". Description: " + (project.description || "Not provided") + ". Project instructions: " + (project.instructions || "No additional instructions") + ". Apply this context when relevant, but follow the user's latest request."
+      : modules[assistant];
     const model = process.env.AI_GATEWAY_MODEL;
     if (!model) return Response.json({ error: "AI model is not configured. Set AI_GATEWAY_MODEL in Vercel." }, { status: 503 });
 
     const result = streamText({
       model,
-      system: modules[assistant],
+      system: systemPrompt,
       messages,
       maxOutputTokens: 8192,
       onFinish: async ({ text, finishReason, totalUsage }) => {

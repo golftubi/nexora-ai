@@ -17,7 +17,7 @@ export async function reserveFreeMessage(userId: string) {
   const result = await db.query("INSERT INTO user_daily_usage (user_id, usage_date, messages_used) VALUES ($1, (now() AT TIME ZONE 'UTC')::date, 1) ON CONFLICT (user_id, usage_date) DO UPDATE SET messages_used = user_daily_usage.messages_used + 1, updated_at = now() WHERE user_daily_usage.messages_used < $2 RETURNING messages_used AS \"messagesUsed\"", [userId, messageLimit]);
   if (!result.rowCount) {
     const current = await db.query("SELECT messages_used AS \"messagesUsed\" FROM user_daily_usage WHERE user_id = $1 AND usage_date = (now() AT TIME ZONE 'UTC')::date", [userId]);
-    return { allowed: false, used: Number(current.rows[0]?.messagesUsed ?? FREE_LIMITS.messagesPerDay), limit: messageLimit };
+    return { allowed: false, used: Number(current.rows[0]?.messagesUsed ?? messageLimit), limit: messageLimit };
   }
   return { allowed: true, used: Number(result.rows[0].messagesUsed), limit: messageLimit };
 }

@@ -104,3 +104,14 @@ CREATE TABLE IF NOT EXISTS admin_users (
   created_at timestamptz NOT NULL DEFAULT now(),
   updated_at timestamptz NOT NULL DEFAULT now()
 );
+
+-- Nexora Free plan, subscriptions, usage limits and Projects.
+CREATE TABLE IF NOT EXISTS subscription_plans (id text PRIMARY KEY, name text NOT NULL, monthly_price_ngn integer NOT NULL DEFAULT 0, monthly_price_usd numeric(10,2) NOT NULL DEFAULT 0, annual_price_ngn integer, annual_price_usd numeric(10,2), limits jsonb NOT NULL DEFAULT '{}'::jsonb, is_active boolean NOT NULL DEFAULT true, created_at timestamptz NOT NULL DEFAULT now(), updated_at timestamptz NOT NULL DEFAULT now());
+INSERT INTO subscription_plans (id, name, limits) VALUES ('free', 'Nexora Free', '{"messages_per_day":20,"projects":3,"file_uploads_per_month":5,"max_file_size_mb":10,"research_tasks_per_month":3}'::jsonb) ON CONFLICT (id) DO UPDATE SET name = EXCLUDED.name, limits = EXCLUDED.limits, updated_at = now();
+CREATE TABLE IF NOT EXISTS user_subscriptions (id uuid PRIMARY KEY DEFAULT gen_random_uuid(), user_id text NOT NULL UNIQUE REFERENCES "user"(id) ON DELETE CASCADE, plan_id text NOT NULL REFERENCES subscription_plans(id), status text NOT NULL DEFAULT 'active' CHECK (status IN ('active','past_due','cancelled','expired','suspended')), billing_cycle text NOT NULL DEFAULT 'free' CHECK (billing_cycle IN ('free','monthly','annual')), currency text CHECK (currency IN ('NGN','USD')), started_at timestamptz NOT NULL DEFAULT now(), current_period_start timestamptz NOT NULL DEFAULT now(), current_period_end timestamptz, created_at timestamptz NOT NULL DEFAULT now(), updated_at timestamptz NOT NULL DEFAULT now());
+CREATE INDEX IF NOT EXISTS user_subscriptions_plan_status_idx ON user_subscriptions(plan_id, status);
+CREATE TABLE IF NOT EXISTS user_daily_usage (user_id text NOT NULL REFERENCES "user"(id) ON DELETE CASCADE, usage_date date NOT NULL DEFAULT (now() AT TIME ZONE 'UTC')::date, messages_used integer NOT NULL DEFAULT 0 CHECK (messages_used >= 0), updated_at timestamptz NOT NULL DEFAULT now(), PRIMARY KEY (user_id, usage_date));
+CREATE TABLE IF NOT EXISTS projects (id uuid PRIMARY KEY DEFAULT gen_random_uuid(), user_id text NOT NULL REFERENCES "user"(id) ON DELETE CASCADE, name text NOT NULL CHECK (char_length(name) BETWEEN 1 AND 80), description text NOT NULL DEFAULT '', instructions text NOT NULL DEFAULT '', created_at timestamptz NOT NULL DEFAULT now(), updated_at timestamptz NOT NULL DEFAULT now());
+CREATE INDEX IF NOT EXISTS projects_user_updated_idx ON projects(user_id, updated_at DESC);
+ALTER TABLE conversations ADD COLUMN IF NOT EXISTS project_id uuid REFERENCES projects(id) ON DELETE SET NULL;
+CREATE INDEX IF NOT EXISTS conversations_project_updated_idx ON conversations(project_id, updated_at DESC);

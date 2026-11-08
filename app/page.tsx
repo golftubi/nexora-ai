@@ -109,8 +109,36 @@ export default function Home() {
   const [messages, setMessages] = useState<{ role: string; content: string }[]>([]);
   const [busy, setBusy] = useState(false);
   const [conversationId, setConversationId] = useState<string | null>(null);
-  const [conversations, setConversations] = useState<{ id: string; assistantId: string; title: string; updatedAt: string }[]>([]);
+  const [conversations, setConversations] = useState<{ id: string; assistantId: string; title: string; updatedAt: string; projectId?: string | null }[]>([]);
+  const [projects, setProjects] = useState<{ id: string; name: string; description: string; instructions: string; conversationCount: number }[]>([]);
+  const [activeProjectId, setActiveProjectId] = useState<string | null>(null);
+  const [planUsage, setPlanUsage] = useState<{ plan: { name: string }; usage: { messages: { used: number; limit: number }; projects: { used: number; limit: number } } } | null>(null);
   const { data: session, isPending } = authClient.useSession();
+
+  async function refreshProjects() {
+    const response = await fetch("/api/projects", { cache: "no-store" });
+    if (!response.ok) return;
+    const data = await response.json() as { projects?: typeof projects };
+    setProjects(data.projects || []);
+  }
+
+  async function refreshPlanUsage() {
+    const response = await fetch("/api/free/entitlements", { cache: "no-store" });
+    if (!response.ok) return;
+    setPlanUsage(await response.json());
+  }
+
+  async function createProject() {
+    const name = window.prompt("Name your new Project");
+    if (!name?.trim()) return;
+    const response = await fetch("/api/projects", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name }) });
+    const data = await response.json() as { project?: { id: string }; error?: string };
+    if (!response.ok) { window.alert(data.error || "Unable to create Project."); return; }
+    await refreshProjects();
+    await refreshPlanUsage();
+    if (data.project) setActiveProjectId(data.project.id);
+    startNewConversation();
+  }
 
   async function refreshConversations() {
     const response = await fetch("/api/conversations", { cache: "no-store" });
@@ -120,19 +148,20 @@ export default function Home() {
   }
 
   useEffect(() => {
-    if (session?.user) void refreshConversations();
-    else { setConversations([]); setConversationId(null); setMessages([]); }
+    if (session?.user) { void refreshConversations(); void refreshProjects(); void refreshPlanUsage(); }
+    else { setConversations([]); setProjects([]); setPlanUsage(null); setActiveProjectId(null); setConversationId(null); setMessages([]); }
   }, [session?.user?.id]);
 
   async function openConversation(id: string) {
     const response = await fetch(`/api/conversations/${id}`, { cache: "no-store" });
     if (!response.ok) return;
     const data = await response.json() as {
-      conversation: { id: string; assistantId: string };
+      conversation: { id: string; assistantId: string; projectId?: string | null };
       messages: { role: string; content: string }[];
     };
     setConversationId(data.conversation.id);
     setAssistant(data.conversation.assistantId);
+    setActiveProjectId(data.conversation.projectId || null);
     setMessages(data.messages.map((message) => ({ role: message.role, content: message.content })));
   }
 
@@ -150,7 +179,7 @@ export default function Home() {
         const created = await fetch("/api/conversations", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ assistantId: assistant }),
+          body: JSON.stringify({ assistantId: assistant, projectId: activeProjectId }),
         });
         if (!created.ok) {
           const raw = await created.text();
@@ -208,6 +237,7 @@ export default function Home() {
       if (!answer.trim()) throw new Error("Nexora received no answer from the AI service. Please try again in a moment.");
       setMessages([...next, { role: "assistant", content: answer }]);
       void refreshConversations();
+      void refreshPlanUsage();
     } catch (error) {
       const message = error instanceof Error ? error.message : "Unable to reach Nexora AI.";
       setMessages([...next, { role: "assistant", content: `Unable to complete this response: ${message}` }]);
@@ -245,6 +275,7 @@ export default function Home() {
             </button>
           )}</div>
         </>}
+        {session?.user && <><p className="eyebrow">YOUR PROJECTS</p><button className="assistant" onClick={() => void createProject()}><span>＋</span><span>New Project ({projects.length}/{planUsage?.usage.projects.limit ?? 3})</span></button>{projects.map((project) => <button key={project.id} className={activeProjectId === project.id ? "assistant selected" : "assistant"} onClick={() => { setActiveProjectId(project.id); startNewConversation(); }}><span>▣</span><span>{project.name}</span></button>)}</>}
         <p className="eyebrow">SPECIALIST ASSISTANTS</p>
         {assistants.map((item) => <button key={item.id} className={assistant === item.id ? "assistant selected" : "assistant"} onClick={() => { setAssistant(item.id); startNewConversation(); }}><span>{item.icon}</span><span>{item.name}</span></button>)}
         <div className="sidebarfoot">One Platform.<br />Multiple Intelligences.</div>
@@ -262,6 +293,8 @@ export default function Home() {
             <h2>What would you like<br />to work on today?</h2>
             <p>Choose a specialist assistant and start a conversation.</p>
             {!session?.user && !isPending && <p className="signin-note">Create a free account or sign in to start chatting.</p>}
+            {session?.user && <div className="free-usage"><span>{planUsage?.plan.name || "Nexora Free"}</span><span>{planUsage?.usage.messages.used ?? 0}/{planUsage?.usage.messages.limit ?? 20} daily messages</span></div>}
+            {activeProjectId && <p className="project-context">Working in: {projects.find((project) => project.id === activeProjectId)?.name || "Project"}</p>}
             <div className="suggestions">{["Help me plan a project", "Explain a complex topic", "Review a business idea"].map((item) => <button key={item} onClick={() => setInput(item)}>{item}　↗</button>)}</div>
           </div> : <div className="messages">{messages.map((message, index) => <article className={message.role === "user" ? "message user" : "message"} key={index}><b>{message.role === "user" ? "YOU" : "NEXORA"}</b><div className="markdown-body">{message.role === "user" ? <p>{message.content}</p> : renderMarkdown(message.content)}</div></article>)}</div>}
         </div>

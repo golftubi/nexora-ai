@@ -18,8 +18,8 @@ export async function GET(request: Request) {
     return Response.json({
       plan: { id: subscription.planId, name: subscription.planName, status: subscription.status },
       usage: {
-        messages: { used: Number(usage.rows[0]?.messagesUsed ?? 0), limit: FREE_LIMITS.messagesPerDay },
-        projects: { used: Number(projects.rows[0].total), limit: FREE_LIMITS.projects },
+        messages: { used: Number(usage.rows[0]?.messagesUsed ?? 0), limit: Number(subscription.limits.messages_per_day ?? FREE_LIMITS.messagesPerDay) },
+        projects: { used: Number(projects.rows[0].total), limit: Number(subscription.limits.projects ?? FREE_LIMITS.projects) },
       },
     });
   } catch (error) {

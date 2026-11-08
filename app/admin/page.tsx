@@ -54,6 +54,7 @@ export default function AdminDashboard() {
         <span className="admin-kicker">NEXORA AI · ADMINISTRATION</span>
         <h1>Administrator access required</h1>
         <p>{error || "The dashboard could not be loaded."}</p>
+        <div className="admin-diagnostic"><span>NEXORA SIGN-IN ACCOUNT</span><b>{session?.user?.email || "No active Nexora session detected"}</b><small>This is the email Nexora is using for this browser session. Administrator access is currently assigned to golf90002000@gmail.com.</small></div>
         <Link href="/" className="admin-link">Return to Nexora workspace</Link>
       </section>
     </main>

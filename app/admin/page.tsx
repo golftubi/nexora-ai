@@ -17,7 +17,7 @@ type DashboardData = {
   recentAudit: { id: string; action: string; resourceType: string | null; createdAt: string }[];
 };
 
-const number = (value: string | number | undefined) => Number(value || 0).toLocaleString();
+const number = (value: string | number | null | undefined) => Number(value || 0).toLocaleString();
 
 export default function AdminDashboard() {
   const { data: session, isPending } = authClient.useSession();
@@ -114,7 +114,7 @@ export default function AdminDashboard() {
             <div className="admin-usage">
               <div><span>Input tokens</span><b>{number(data.metrics.usage.inputTokens)}</b></div>
               <div><span>Output tokens</span><b>{number(data.metrics.usage.outputTokens)}</b></div>
-              <div><span>Estimated cost (USD)</span><b>${number(data.metrics.usage.estimatedCost)}</b></div>
+              <div><span>Estimated cost (USD)</span><b>{data.metrics.usage.estimatedCost === null ? "Not metered" : `${number(data.metrics.usage.estimatedCost)}`}</b></div>
             </div>
             <p className="admin-footnote">Usage values will populate after token metering is connected to completed AI responses. Estimated cost is not an invoice.</p>
           </article>

@@ -31,6 +31,8 @@ export async function POST(request: Request) {
     const body = await request.json() as { assistantId?: unknown; title?: unknown };
     const assistantId = typeof body.assistantId === "string" ? body.assistantId : "general";
     if (!allowedAssistants.has(assistantId)) return Response.json({ error: "Unknown assistant." }, { status: 400 });
+    const assistantStatus = await getDb().query("SELECT enabled FROM assistant_catalog WHERE id = $1", [assistantId]);
+    if (!assistantStatus.rows[0]?.enabled) return Response.json({ error: "This assistant is currently unavailable." }, { status: 403 });
     if (assistantId === "security") {
       const allowlist = (process.env.NEXORA_SECURITY_ADMIN_EMAILS || "").split(",").map(v => v.trim().toLowerCase()).filter(Boolean);
       if (!allowlist.includes(session.user.email.toLowerCase())) return Response.json({ error: "Security & Intelligence access is restricted." }, { status: 403 });

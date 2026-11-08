@@ -67,6 +67,8 @@ export async function POST(req: Request) {
     );
     if (!owned.rowCount) return Response.json({ error: "Conversation not found." }, { status: 404 });
     if (owned.rows[0].assistant_id !== assistant) return Response.json({ error: "This conversation belongs to a different assistant." }, { status: 409 });
+    const model = process.env.AI_GATEWAY_MODEL;
+    if (!model) return Response.json({ error: "AI model is not configured. Set AI_GATEWAY_MODEL in Vercel." }, { status: 503 });
     const quota = await reserveFreeMessage(session.user.id);
     if (!quota.allowed) return Response.json({ error: "You have reached your Nexora Free daily allowance of " + quota.limit + " messages. Your allowance refreshes at 00:00 UTC.", code: "DAILY_LIMIT_REACHED", usage: quota }, { status: 429 });
 
@@ -88,9 +90,6 @@ export async function POST(req: Request) {
     const systemPrompt = project
       ? modules[assistant] + "\n\nProject context: You are working within the user's Project \"" + project.name + "\". Description: " + (project.description || "Not provided") + ". Project instructions: " + (project.instructions || "No additional instructions") + ". Apply this context when relevant, but follow the user's latest request."
       : modules[assistant];
-    const model = process.env.AI_GATEWAY_MODEL;
-    if (!model) return Response.json({ error: "AI model is not configured. Set AI_GATEWAY_MODEL in Vercel." }, { status: 503 });
-
     const result = streamText({
       model,
       system: systemPrompt,

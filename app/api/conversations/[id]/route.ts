@@ -9,7 +9,7 @@ export async function GET(request: Request, context: { params: Promise<{ id: str
     if (!session?.user) return Response.json({ error: "Sign in to view this conversation." }, { status: 401 });
     const { id } = await context.params;
     const conversation = await getDb().query(
-      `SELECT id, assistant_id AS "assistantId", title, created_at AS "createdAt", updated_at AS "updatedAt"
+      `SELECT id, assistant_id AS "assistantId", title, created_at AS "createdAt", updated_at AS "updatedAt", project_id AS "projectId"
        FROM conversations WHERE id = $1 AND user_id = $2`,
       [id, session.user.id],
     );

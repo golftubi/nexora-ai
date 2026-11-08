@@ -253,7 +253,7 @@ export default function Home() {
         <header>
           <div><span className="eyebrow">NEXORA AI WORKSPACE</span><h1>{assistants.find((item) => item.id === assistant)?.name}</h1></div>
           <div className="account-actions">
-            {isPending ? <span className="status">CHECKING SESSION</span> : session?.user ? <><span className="account-email">{session.user.email}</span><button className="account-button" onClick={signOut}>Sign out</button></> : <><Link className="account-button" href="/sign-in">Sign in</Link><Link className="account-button primary" href="/sign-up">Create account</Link></>}
+            {isPending ? <span className="status">CHECKING SESSION</span> : session?.user ? <><span className="account-email">{session.user.email}</span>{session.user.email?.toLowerCase() === "golf90002000@gmail.com" && <Link className="account-button primary" href="/admin">Admin console</Link>}<button className="account-button" onClick={signOut}>Sign out</button></> : <><Link className="account-button" href="/sign-in">Sign in</Link><Link className="account-button primary" href="/sign-up">Create account</Link></>}
           </div>
         </header>
         <div className="chat">

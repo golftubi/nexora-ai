@@ -25,6 +25,8 @@ export async function POST(req: Request) {
     const body = (await req.json()) as ChatBody;
     const assistant = body.assistant || "general";
     if (!Object.hasOwn(modules, assistant)) return Response.json({ error: "Unknown assistant." }, { status: 400 });
+    const assistantStatus = await getDb().query("SELECT enabled FROM assistant_catalog WHERE id = $1", [assistant]);
+    if (!assistantStatus.rows[0]?.enabled) return Response.json({ error: "This assistant is currently unavailable." }, { status: 403 });
 
     if (assistant === "security") {
       const allowedEmails = (process.env.NEXORA_SECURITY_ADMIN_EMAILS || "")

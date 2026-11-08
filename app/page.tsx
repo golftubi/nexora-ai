@@ -131,7 +131,15 @@ export default function Home() {
   async function createProject() {
     const name = window.prompt("Name your new Project");
     if (!name?.trim()) return;
-    const response = await fetch("/api/projects", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name }) });
+    const description = window.prompt("Project description (optional): What is this Project about?", "");
+    if (description === null) return;
+    const instructions = window.prompt("Project instructions (optional): What should Nexora consistently keep in mind?", "");
+    if (instructions === null) return;
+    const response = await fetch("/api/projects", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name, description, instructions }),
+    });
     const data = await response.json() as { project?: { id: string }; error?: string };
     if (!response.ok) { window.alert(data.error || "Unable to create Project."); return; }
     await refreshProjects();
@@ -320,7 +328,7 @@ export default function Home() {
             <p>Choose a specialist assistant and start a conversation.</p>
             {!session?.user && !isPending && <p className="signin-note">Create a free account or sign in to start chatting.</p>}
             {session?.user && <div className="free-usage"><span>{planUsage?.plan.name || "Nexora Free"}</span><span>{planUsage?.usage.messages.used ?? 0}/{planUsage?.usage.messages.limit ?? 20} daily messages</span></div>}
-            {activeProjectId && <p className="project-context">Working in: {projects.find((project) => project.id === activeProjectId)?.name || "Project"}</p>}
+            {activeProjectId && <div className="project-context"><strong>Working in: {projects.find((project) => project.id === activeProjectId)?.name || "Project"}</strong><p>{projects.find((project) => project.id === activeProjectId)?.description || "No description added yet. Use Edit Project to add one."}</p>{projects.find((project) => project.id === activeProjectId)?.instructions && <p><b>Project instructions:</b> {projects.find((project) => project.id === activeProjectId)?.instructions}</p>}</div>}
             <div className="suggestions">{["Help me plan a project", "Explain a complex topic", "Review a business idea"].map((item) => <button key={item} onClick={() => setInput(item)}>{item}　↗</button>)}</div>
           </div> : <div className="messages">{messages.map((message, index) => <article className={message.role === "user" ? "message user" : "message"} key={index}><b>{message.role === "user" ? "YOU" : "NEXORA"}</b><div className="markdown-body">{message.role === "user" ? <p>{message.content}</p> : renderMarkdown(message.content)}</div></article>)}</div>}
         </div>

@@ -10,11 +10,12 @@ export async function GET(request: Request) {
     const session = await getAuth().api.getSession({ headers: request.headers });
     if (!session?.user) return Response.json({ error: "Sign in to view Projects." }, { status: 401 });
     const subscription = await ensureFreeSubscription(session.user.id);
+    const projectLimit = Number(subscription.limits.projects ?? FREE_LIMITS.projects);
     const result = await getDb().query(
       "SELECT p.id, p.name, p.description, p.instructions, p.created_at AS \"createdAt\", p.updated_at AS \"updatedAt\", (SELECT count(*)::int FROM conversations c WHERE c.project_id = p.id) AS \"conversationCount\" FROM projects p WHERE p.user_id = $1 ORDER BY p.updated_at DESC",
       [session.user.id],
     );
-    return Response.json({ projects: result.rows, plan: { id: subscription.planId, name: subscription.planName, projectLimit: FREE_LIMITS.projects } });
+    return Response.json({ projects: result.rows, plan: { id: subscription.planId, name: subscription.planName, projectLimit } });
   } catch (error) {
     console.error("Project list failed:", error);
     return Response.json({ error: "Unable to load Projects." }, { status: 500 });
@@ -25,7 +26,8 @@ export async function POST(request: Request) {
   try {
     const session = await getAuth().api.getSession({ headers: request.headers });
     if (!session?.user) return Response.json({ error: "Sign in to create a Project." }, { status: 401 });
-    await ensureFreeSubscription(session.user.id);
+    const subscription = await ensureFreeSubscription(session.user.id);
+    const projectLimit = Number(subscription.limits.projects ?? FREE_LIMITS.projects);
     const body = await request.json() as { name?: unknown; description?: unknown; instructions?: unknown };
     const name = typeof body.name === "string" ? body.name.trim() : "";
     const description = typeof body.description === "string" ? body.description.trim().slice(0, 500) : "";
@@ -38,9 +40,9 @@ export async function POST(request: Request) {
       await client.query("BEGIN");
       await client.query("SELECT pg_advisory_xact_lock(hashtext($1))", [session.user.id]);
       const count = await client.query("SELECT count(*)::int AS total FROM projects WHERE user_id = $1", [session.user.id]);
-      if (Number(count.rows[0].total) >= FREE_LIMITS.projects) {
+      if (Number(count.rows[0].total) >= projectLimit) {
         await client.query("ROLLBACK");
-        return Response.json({ error: "Nexora Free includes up to 3 active Projects.", limit: FREE_LIMITS.projects }, { status: 403 });
+        return Response.json({ error: "Nexora Free includes up to " + projectLimit + " active Projects.", limit: projectLimit }, { status: 403 });
       }
       const created = await client.query(
         "INSERT INTO projects (user_id, name, description, instructions) VALUES ($1, $2, $3, $4) RETURNING id, name, description, instructions, created_at AS \"createdAt\", updated_at AS \"updatedAt\"",

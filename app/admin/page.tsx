@@ -24,6 +24,30 @@ export default function AdminDashboard() {
   const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [updatingAssistant, setUpdatingAssistant] = useState<string | null>(null);
+  const [assistantError, setAssistantError] = useState("");
+
+  async function toggleAssistant(id: string, enabled: boolean) {
+    setUpdatingAssistant(id);
+    setAssistantError("");
+    try {
+      const response = await fetch(`/api/admin/assistants/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ enabled }),
+      });
+      const payload = await response.json() as { error?: string };
+      if (!response.ok) throw new Error(payload.error || "Unable to update assistant.");
+      setData((current) => current ? {
+        ...current,
+        assistants: current.assistants.map((item) => item.id === id ? { ...item, enabled } : item),
+      } : current);
+    } catch (cause) {
+      setAssistantError(cause instanceof Error ? cause.message : "Assistant update failed.");
+    } finally {
+      setUpdatingAssistant(null);
+    }
+  }
 
   useEffect(() => {
     if (isPending) return;
@@ -94,9 +118,10 @@ export default function AdminDashboard() {
           <article className="admin-panel" id="assistants">
             <div className="admin-panel-heading"><div><span className="admin-kicker">AI WORKSPACE</span><h2>Assistant directory</h2></div><span className="admin-count">{data.assistants.length} assistants</span></div>
             <div className="admin-table-wrap"><table><thead><tr><th>Assistant</th><th>Access</th><th>Status</th></tr></thead><tbody>
-              {data.assistants.map((assistant) => <tr key={assistant.id}><td><b>{assistant.name}</b><small>{assistant.description}</small></td><td><span className={assistant.accessLevel === "restricted" ? "admin-tag restricted" : "admin-tag"}>{assistant.accessLevel}</span></td><td><span className={assistant.enabled ? "admin-status enabled" : "admin-status disabled"}>{assistant.enabled ? "Enabled" : "Disabled"}</span></td></tr>)}
+              {data.assistants.map((assistant) => <tr key={assistant.id}><td><b>{assistant.name}</b><small>{assistant.description}</small></td><td><span className={assistant.accessLevel === "restricted" ? "admin-tag restricted" : "admin-tag"}>{assistant.accessLevel}</span></td><td><span className={assistant.enabled ? "admin-status enabled" : "admin-status disabled"}>{assistant.enabled ? "Enabled" : "Disabled"}</span><button className="admin-toggle" disabled={updatingAssistant === assistant.id} onClick={() => void toggleAssistant(assistant.id, !assistant.enabled)}>{updatingAssistant === assistant.id ? "Saving…" : assistant.enabled ? "Disable" : "Enable"}</button></td></tr>)}
             </tbody></table></div>
-            <p className="admin-footnote">Assistant configuration is currently read-only in this first dashboard release.</p>
+            {assistantError && <p className="admin-footnote">{assistantError}</p>}
+            <p className="admin-footnote">Changes are recorded in the audit log and enforced by the server.</p>
           </article>
 
           <article className="admin-panel" id="users">

@@ -140,6 +140,32 @@ export default function Home() {
     startNewConversation();
   }
 
+  async function editProject(project: typeof projects[number]) {
+    const name = window.prompt("Project name", project.name);
+    if (name === null) return;
+    const description = window.prompt("Project description", project.description || "");
+    if (description === null) return;
+    const instructions = window.prompt("Instructions Nexora should follow in this Project", project.instructions || "");
+    if (instructions === null) return;
+    const response = await fetch("/api/projects/" + project.id, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name, description, instructions }),
+    });
+    const data = await response.json() as { error?: string };
+    if (!response.ok) { window.alert(data.error || "Unable to update Project."); return; }
+    await refreshProjects();
+  }
+
+  async function deleteProject(project: typeof projects[number]) {
+    if (!window.confirm("Delete the Project " + project.name + "? Its conversations will remain in your history but will no longer use this Project context.")) return;
+    const response = await fetch("/api/projects/" + project.id, { method: "DELETE" });
+    if (!response.ok) { window.alert("Unable to delete Project."); return; }
+    if (activeProjectId === project.id) setActiveProjectId(null);
+    await refreshProjects();
+    await refreshPlanUsage();
+  }
+
   async function refreshConversations() {
     const response = await fetch("/api/conversations", { cache: "no-store" });
     if (!response.ok) return;
@@ -275,7 +301,7 @@ export default function Home() {
             </button>
           )}</div>
         </>}
-        {session?.user && <><p className="eyebrow">YOUR PROJECTS</p><button className="assistant" onClick={() => void createProject()}><span>＋</span><span>New Project ({projects.length}/{planUsage?.usage.projects.limit ?? 3})</span></button>{projects.map((project) => <button key={project.id} className={activeProjectId === project.id ? "assistant selected" : "assistant"} onClick={() => { setActiveProjectId(project.id); startNewConversation(); }}><span>▣</span><span>{project.name}</span></button>)}</>}
+        {session?.user && <><p className="eyebrow">YOUR PROJECTS</p><button className="assistant" onClick={() => void createProject()}><span>＋</span><span>New Project ({projects.length}/{planUsage?.usage.projects.limit ?? 3})</span></button>{projects.map((project) => <div className="project-row" key={project.id}><button className={activeProjectId === project.id ? "assistant selected" : "assistant"} onClick={() => { setActiveProjectId(project.id); startNewConversation(); }}><span>▣</span><span>{project.name}</span></button><button className="project-edit" title="Edit Project" onClick={() => void editProject(project)}>✎</button><button className="project-edit" title="Delete Project" onClick={() => void deleteProject(project)}>×</button></div>)}</>}
         <p className="eyebrow">SPECIALIST ASSISTANTS</p>
         {assistants.map((item) => <button key={item.id} className={assistant === item.id ? "assistant selected" : "assistant"} onClick={() => { setAssistant(item.id); startNewConversation(); }}><span>{item.icon}</span><span>{item.name}</span></button>)}
         <div className="sidebarfoot">One Platform.<br />Multiple Intelligences.</div>

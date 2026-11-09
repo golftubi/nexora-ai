@@ -355,14 +355,18 @@ export default function Home() {
           {!historyError && historyLoading && conversations.length === 0 && <p className="history-feedback">Loading saved conversations…</p>}
           {!historyError && !historyLoading && conversations.length === 0 && <p className="history-feedback">No saved conversations yet. Open this drawer again or tap refresh to check.</p>}
           {!historyError && conversations.length > 0 && <p className="history-feedback">{conversations.length} saved conversation{conversations.length === 1 ? "" : "s"}</p>}
-          <div className="conversation-history">{conversations.map((item) =>
-            <button key={item.id} className={conversationId === item.id ? "history-item active" : "history-item"}
-              disabled={openingConversationId === item.id}
-              onClick={() => { void openConversation(item.id); setMobileNavOpen(false); }}>
-              <span>{openingConversationId === item.id ? "Opening…" : (assistants.find((a) => a.id === item.assistantId)?.name || "Nexora AI")}</span>
-              <small>{item.title}</small>
-            </button>
-          )}</div>
+          <div className="recent-conversation-list" aria-label="Saved conversations">
+            {conversations.map((item) =>
+              <button key={item.id} type="button"
+                className={conversationId === item.id ? "recent-conversation-entry active" : "recent-conversation-entry"}
+                disabled={openingConversationId === item.id}
+                onClick={() => { void openConversation(item.id); setMobileNavOpen(false); }}
+                style={{display:"flex",visibility:"visible",width:"100%",minHeight:48,flexDirection:"column",alignItems:"flex-start",justifyContent:"center",gap:3,padding:"9px 11px",margin:"2px 0",border:"1px solid #d5e2eb",borderRadius:9,background:"#f1f6fa",color:"#33465e",textAlign:"left",whiteSpace:"normal",opacity:1}}>
+                <span style={{display:"block",color:"#087fa5",fontSize:11,fontWeight:700,lineHeight:1.4}}>{openingConversationId === item.id ? "Opening…" : (assistants.find((a) => a.id === item.assistantId)?.name || "Nexora AI")}</span>
+                <small style={{display:"block",width:"100%",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",color:"#52657a",fontSize:12,lineHeight:1.4}}>{item.title?.trim() || "Untitled conversation"}</small>
+              </button>
+            )}
+          </div>
         </>}
         {session?.user && <><p className="eyebrow">YOUR PROJECTS</p><button className="assistant" onClick={() => { void createProject(); setMobileNavOpen(false); }}><span>＋</span><span>New Project ({projects.length}/{planUsage?.usage.projects.limit ?? 3})</span></button>{projects.map((project) => <div className="project-row" key={project.id}><button className={activeProjectId === project.id ? "assistant selected" : "assistant"} onClick={() => { setActiveProjectId(project.id); startNewConversation(); setMobileNavOpen(false); }}><span>▣</span><span>{project.name}</span></button><button className="project-edit" title="Edit Project" onClick={() => void editProject(project)}>✎</button><button className="project-edit" title="Delete Project" onClick={() => void deleteProject(project)}>×</button></div>)}</>}
         <p className="eyebrow">SPECIALIST ASSISTANTS</p>

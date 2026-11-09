@@ -297,3 +297,11 @@ button,a{ -webkit-tap-highlight-color:transparent }
 .history-feedback.error{color:#e58b96}
 .history-item:disabled{opacity:.65;cursor:wait}
 @media(prefers-color-scheme:light){.history-feedback{color:#64748b}.history-feedback.error{color:#b42335}}
+
+/* Ensure saved history entries remain visible in the mobile navigation drawer. */
+@media(max-width:760px){
+  .sidebar .conversation-history{display:flex!important;visibility:visible!important;flex-direction:column;gap:5px;max-height:180px;overflow-y:auto;margin:0 0 10px}
+  .sidebar .conversation-history .history-item{display:flex!important;visibility:visible!important;flex-direction:column;align-items:flex-start;width:100%;min-height:44px;padding:8px 10px;color:#33465e;background:#f1f6fa;border:1px solid #dce7ef;border-radius:8px;text-align:left}
+  .sidebar .conversation-history .history-item span{display:block!important;color:#087fa5;font-size:10px;font-weight:700}
+  .sidebar .conversation-history .history-item small{display:block!important;color:#52657a;font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;width:100%}
+}

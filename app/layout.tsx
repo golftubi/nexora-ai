@@ -1,10 +1,13 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
+import PwaRegister from "../components/pwa-register";
 
 export const metadata: Metadata = {
   title: "Nexora AI | One Platform. Multiple Intelligences.",
   description: "A modular AI workspace with specialist assistants.",
   applicationName: "Nexora AI",
+  appleWebApp: { capable: true, title: "Nexora AI", statusBarStyle: "black-translucent" },
+  icons: { icon: [{ url: "/icons/nexora-icon.svg", type: "image/svg+xml" }], apple: [{ url: "/icons/nexora-icon.svg", type: "image/svg+xml" }] },
 };
 
 export const viewport: Viewport = {
@@ -18,5 +21,5 @@ export const viewport: Viewport = {
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
-  return <html lang="en"><body>{children}</body></html>;
+  return <html lang="en"><body>{children}<PwaRegister /></body></html>;
 }

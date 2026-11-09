@@ -106,6 +106,7 @@ function renderMarkdown(markdown: string): ReactNode[] {
 export default function Home() {
   const [assistant, setAssistant] = useState("general");
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [input, setInput] = useState("");
   const [messages, setMessages] = useState<{ role: string; content: string }[]>([]);
   const [busy, setBusy] = useState(false);
@@ -301,10 +302,10 @@ export default function Home() {
   }
 
   return (
-    <main className="shell">
+    <main className={sidebarCollapsed ? "shell sidebar-collapsed" : "shell"}>
       {mobileNavOpen && <button className="sidebar-backdrop" aria-label="Close navigation" onClick={() => setMobileNavOpen(false)} />}
       <aside className={mobileNavOpen ? "sidebar mobile-open" : "sidebar"} aria-label="Main navigation">
-        <div className="brand"><span className="brandmark">N</span><div><b>NEXORA</b><small>ARTIFICIAL INTELLIGENCE</small></div></div>
+        <div className="brand"><span className="brandmark">N</span><div><b>NEXORA</b><small>ARTIFICIAL INTELLIGENCE</small></div><button className="sidebar-collapse-button" aria-label={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"} title={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"} onClick={() => setSidebarCollapsed((value) => !value)}>{sidebarCollapsed ? "›" : "‹"}</button><button className="mobile-drawer-close" aria-label="Close navigation" onClick={() => setMobileNavOpen(false)}>×</button></div>
         <button className="new" onClick={() => { startNewConversation(); setMobileNavOpen(false); }}>＋ New conversation</button>
         <p className="eyebrow">YOUR WORKSPACE</p>
         <p className="navactive">◉　AI Workspace</p>

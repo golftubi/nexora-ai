@@ -202,6 +202,10 @@ export default function Home() {
   }, [mobileNavOpen]);
 
   useEffect(() => {
+    if (mobileNavOpen && session?.user) void refreshConversations();
+  }, [mobileNavOpen, session?.user?.id]);
+
+  useEffect(() => {
     if (session?.user) {
       void refreshConversations();
       void refreshProjects();
@@ -349,7 +353,8 @@ export default function Home() {
           <div className="history-heading"><p className="eyebrow">RECENT CONVERSATIONS</p><button className="history-refresh" onClick={() => void refreshConversations()} disabled={historyLoading} aria-label="Refresh conversation history" title="Refresh history">{historyLoading ? "…" : "↻"}</button></div>
           {historyError && <p className="history-feedback error" role="status">{historyError}</p>}
           {!historyError && historyLoading && conversations.length === 0 && <p className="history-feedback">Loading saved conversations…</p>}
-          {!historyError && !historyLoading && conversations.length === 0 && <p className="history-feedback">No saved conversations yet.</p>}
+          {!historyError && !historyLoading && conversations.length === 0 && <p className="history-feedback">No saved conversations yet. Open this drawer again or tap refresh to check.</p>}
+          {!historyError && conversations.length > 0 && <p className="history-feedback">{conversations.length} saved conversation{conversations.length === 1 ? "" : "s"}</p>}
           <div className="conversation-history">{conversations.map((item) =>
             <button key={item.id} className={conversationId === item.id ? "history-item active" : "history-item"}
               disabled={openingConversationId === item.id}

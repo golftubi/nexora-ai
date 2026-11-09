@@ -19,6 +19,7 @@ export async function GET(request: Request) {
        ORDER BY c.updated_at DESC LIMIT 100`,
       [session.user.id],
     );
+    console.info("Nexora history lookup:", JSON.stringify({ authenticated: true, conversationCount: result.rowCount ?? result.rows.length }));
     return Response.json({ conversations: result.rows });
   } catch (error) {
     console.error("Conversation history lookup failed:", error);
@@ -52,6 +53,7 @@ export async function POST(request: Request) {
        created_at AS "createdAt", updated_at AS "updatedAt"`,
       [session.user.id, assistantId, title || "New conversation", projectId],
     );
+    console.info("Nexora conversation created:", JSON.stringify({ created: Boolean(result.rows[0]?.id), assistantId, linkedToProject: Boolean(projectId) }));
     return Response.json({ conversation: result.rows[0] }, { status: 201 });
   } catch (error) {
     console.error("Conversation creation failed:", error);

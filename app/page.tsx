@@ -112,6 +112,9 @@ export default function Home() {
   const [busy, setBusy] = useState(false);
   const [conversationId, setConversationId] = useState<string | null>(null);
   const [conversations, setConversations] = useState<{ id: string; assistantId: string; title: string; updatedAt: string; projectId?: string | null }[]>([]);
+  const [historyLoading, setHistoryLoading] = useState(false);
+  const [historyError, setHistoryError] = useState("");
+  const [openingConversationId, setOpeningConversationId] = useState<string | null>(null);
   const [projects, setProjects] = useState<{ id: string; name: string; description: string; instructions: string; conversationCount: number }[]>([]);
   const [activeProjectId, setActiveProjectId] = useState<string | null>(null);
   const [planUsage, setPlanUsage] = useState<{ plan: { name: string }; usage: { messages: { used: number; limit: number }; projects: { used: number; limit: number } } } | null>(null);
@@ -177,10 +180,18 @@ export default function Home() {
   }
 
   async function refreshConversations() {
-    const response = await fetch("/api/conversations", { cache: "no-store" });
-    if (!response.ok) return;
-    const data = await response.json() as { conversations?: typeof conversations };
-    setConversations(data.conversations || []);
+    setHistoryLoading(true);
+    setHistoryError("");
+    try {
+      const response = await fetch("/api/conversations", { cache: "no-store", credentials: "same-origin" });
+      const data = await response.json() as { conversations?: typeof conversations; error?: string };
+      if (!response.ok) throw new Error(data.error || `History request failed (HTTP ${response.status}).`);
+      setConversations(data.conversations || []);
+    } catch (error) {
+      setHistoryError(error instanceof Error ? error.message : "Unable to load recent conversations.");
+    } finally {
+      setHistoryLoading(false);
+    }
   }
 
   useEffect(() => {
@@ -191,21 +202,44 @@ export default function Home() {
   }, [mobileNavOpen]);
 
   useEffect(() => {
-    if (session?.user) { void refreshConversations(); void refreshProjects(); void refreshPlanUsage(); }
-    else { setConversations([]); setProjects([]); setPlanUsage(null); setActiveProjectId(null); setConversationId(null); setMessages([]); }
+    if (session?.user) {
+      void refreshConversations();
+      void refreshProjects();
+      void refreshPlanUsage();
+    } else {
+      setConversations([]);
+      setHistoryError("");
+      setHistoryLoading(false);
+      setProjects([]);
+      setPlanUsage(null);
+      setActiveProjectId(null);
+      setConversationId(null);
+      setMessages([]);
+    }
   }, [session?.user?.id]);
 
   async function openConversation(id: string) {
-    const response = await fetch(`/api/conversations/${id}`, { cache: "no-store" });
-    if (!response.ok) return;
-    const data = await response.json() as {
-      conversation: { id: string; assistantId: string; projectId?: string | null };
-      messages: { role: string; content: string }[];
-    };
-    setConversationId(data.conversation.id);
-    setAssistant(data.conversation.assistantId);
-    setActiveProjectId(data.conversation.projectId || null);
-    setMessages(data.messages.map((message) => ({ role: message.role, content: message.content })));
+    setOpeningConversationId(id);
+    setHistoryError("");
+    try {
+      const response = await fetch(`/api/conversations/${id}`, { cache: "no-store", credentials: "same-origin" });
+      const data = await response.json() as {
+        conversation?: { id: string; assistantId: string; projectId?: string | null };
+        messages?: { role: string; content: string }[];
+        error?: string;
+      };
+      if (!response.ok || !data.conversation) {
+        throw new Error(data.error || `Unable to open conversation (HTTP ${response.status}).`);
+      }
+      setConversationId(data.conversation.id);
+      setAssistant(data.conversation.assistantId);
+      setActiveProjectId(data.conversation.projectId || null);
+      setMessages((data.messages || []).map((message) => ({ role: message.role, content: message.content })));
+    } catch (error) {
+      setHistoryError(error instanceof Error ? error.message : "Unable to open this conversation.");
+    } finally {
+      setOpeningConversationId(null);
+    }
   }
 
   async function send() {
@@ -238,6 +272,7 @@ export default function Home() {
         const payload = await created.json() as { conversation: { id: string } };
         activeId = payload.conversation.id;
         setConversationId(activeId);
+        void refreshConversations();
       }
     } catch (error) {
       setMessages([...messages, { role: "assistant", content: error instanceof Error ? error.message : "Unable to create conversation." }]);
@@ -284,6 +319,7 @@ export default function Home() {
     } catch (error) {
       const message = error instanceof Error ? error.message : "Unable to reach Nexora AI.";
       setMessages([...next, { role: "assistant", content: `Unable to complete this response: ${message}` }]);
+      void refreshConversations();
     } finally {
       setBusy(false);
     }
@@ -309,12 +345,16 @@ export default function Home() {
         <button className="new" onClick={() => { startNewConversation(); setMobileNavOpen(false); }}>＋ New conversation</button>
         <p className="eyebrow">YOUR WORKSPACE</p>
         <p className="navactive">◉　AI Workspace</p>
-        {session?.user && conversations.length > 0 && <>
-          <p className="eyebrow">RECENT CONVERSATIONS</p>
+        {session?.user && <>
+          <div className="history-heading"><p className="eyebrow">RECENT CONVERSATIONS</p><button className="history-refresh" onClick={() => void refreshConversations()} disabled={historyLoading} aria-label="Refresh conversation history" title="Refresh history">{historyLoading ? "…" : "↻"}</button></div>
+          {historyError && <p className="history-feedback error" role="status">{historyError}</p>}
+          {!historyError && historyLoading && conversations.length === 0 && <p className="history-feedback">Loading saved conversations…</p>}
+          {!historyError && !historyLoading && conversations.length === 0 && <p className="history-feedback">No saved conversations yet.</p>}
           <div className="conversation-history">{conversations.map((item) =>
             <button key={item.id} className={conversationId === item.id ? "history-item active" : "history-item"}
+              disabled={openingConversationId === item.id}
               onClick={() => { void openConversation(item.id); setMobileNavOpen(false); }}>
-              <span>{assistants.find((a) => a.id === item.assistantId)?.name || "Nexora AI"}</span>
+              <span>{openingConversationId === item.id ? "Opening…" : (assistants.find((a) => a.id === item.assistantId)?.name || "Nexora AI")}</span>
               <small>{item.title}</small>
             </button>
           )}</div>

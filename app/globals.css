@@ -163,3 +163,32 @@ button,a{ -webkit-tap-highlight-color:transparent }
 @media(prefers-reduced-motion:reduce){
   .sidebar{transition:none}
 }
+
+
+/* Adaptive navigation: collapsible desktop rail and mobile drawer controls */
+.sidebar-collapse-button,.mobile-drawer-close{display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;width:32px;height:32px;border:1px solid #ffffff1c;border-radius:8px;background:#111f31;color:#b9d8eb;font-size:20px;line-height:1;cursor:pointer}
+.sidebar-collapse-button{margin-left:auto}
+.mobile-drawer-close{display:none}
+.shell.sidebar-collapsed .sidebar{width:78px;padding-left:12px;padding-right:12px}
+.shell.sidebar-collapsed .brand{justify-content:center;position:relative;margin-bottom:30px}
+.shell.sidebar-collapsed .brand>div,.shell.sidebar-collapsed .sidebar .eyebrow,.shell.sidebar-collapsed .new,.shell.sidebar-collapsed .navactive,.shell.sidebar-collapsed .assistant span:last-child,.shell.sidebar-collapsed .history-item,.shell.sidebar-collapsed .project-edit,.shell.sidebar-collapsed .sidebarfoot{display:none}
+.shell.sidebar-collapsed .sidebar .assistant{justify-content:center;padding:12px 0}
+.shell.sidebar-collapsed .project-row .assistant{width:100%}
+.shell.sidebar-collapsed .sidebar-collapse-button{position:absolute;top:46px;left:calc(50% - 16px);margin:0}
+@media(max-width:760px){
+  .sidebar-collapse-button{display:none}
+  .mobile-drawer-close{display:inline-flex;margin-left:auto}
+  .brand{display:flex;align-items:center}
+  .sidebar .brand>div{display:block}
+  .sidebar .new,.sidebar .eyebrow,.sidebar .navactive,.sidebar .assistant span:last-child,.sidebar .sidebarfoot{display:initial}
+  .sidebar .new{display:block}
+  .sidebar .assistant{display:flex;justify-content:flex-start}
+  .sidebar .history-item{display:flex}
+  .sidebar .project-edit{display:inline-flex}
+  .shell.sidebar-collapsed .sidebar{width:min(86vw,330px);padding-left:15px;padding-right:15px}
+  .shell.sidebar-collapsed .sidebar .brand>div,.shell.sidebar-collapsed .sidebar .eyebrow,.shell.sidebar-collapsed .sidebar .new,.shell.sidebar-collapsed .sidebar .navactive,.shell.sidebar-collapsed .sidebar .assistant span:last-child,.shell.sidebar-collapsed .sidebar .history-item,.shell.sidebar-collapsed .sidebar .project-edit{display:initial}
+  .shell.sidebar-collapsed .sidebar .new{display:block}
+  .shell.sidebar-collapsed .sidebar .assistant{display:flex;justify-content:flex-start}
+  .shell.sidebar-collapsed .sidebar .history-item{display:flex}
+  .shell.sidebar-collapsed .sidebar .project-edit{display:inline-flex}
+}

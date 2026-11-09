@@ -105,6 +105,7 @@ function renderMarkdown(markdown: string): ReactNode[] {
 
 export default function Home() {
   const [assistant, setAssistant] = useState("general");
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [input, setInput] = useState("");
   const [messages, setMessages] = useState<{ role: string; content: string }[]>([]);
   const [busy, setBusy] = useState(false);
@@ -180,6 +181,13 @@ export default function Home() {
     const data = await response.json() as { conversations?: typeof conversations };
     setConversations(data.conversations || []);
   }
+
+  useEffect(() => {
+    if (!mobileNavOpen) return;
+    const closeOnEscape = (event: KeyboardEvent) => { if (event.key === "Escape") setMobileNavOpen(false); };
+    window.addEventListener("keydown", closeOnEscape);
+    return () => window.removeEventListener("keydown", closeOnEscape);
+  }, [mobileNavOpen]);
 
   useEffect(() => {
     if (session?.user) { void refreshConversations(); void refreshProjects(); void refreshPlanUsage(); }
@@ -294,29 +302,30 @@ export default function Home() {
 
   return (
     <main className="shell">
-      <aside className="sidebar">
+      {mobileNavOpen && <button className="sidebar-backdrop" aria-label="Close navigation" onClick={() => setMobileNavOpen(false)} />}
+      <aside className={mobileNavOpen ? "sidebar mobile-open" : "sidebar"} aria-label="Main navigation">
         <div className="brand"><span className="brandmark">N</span><div><b>NEXORA</b><small>ARTIFICIAL INTELLIGENCE</small></div></div>
-        <button className="new" onClick={startNewConversation}>＋ New conversation</button>
+        <button className="new" onClick={() => { startNewConversation(); setMobileNavOpen(false); }}>＋ New conversation</button>
         <p className="eyebrow">YOUR WORKSPACE</p>
         <p className="navactive">◉　AI Workspace</p>
         {session?.user && conversations.length > 0 && <>
           <p className="eyebrow">RECENT CONVERSATIONS</p>
           <div className="conversation-history">{conversations.map((item) =>
             <button key={item.id} className={conversationId === item.id ? "history-item active" : "history-item"}
-              onClick={() => void openConversation(item.id)}>
+              onClick={() => { void openConversation(item.id); setMobileNavOpen(false); }}>
               <span>{assistants.find((a) => a.id === item.assistantId)?.name || "Nexora AI"}</span>
               <small>{item.title}</small>
             </button>
           )}</div>
         </>}
-        {session?.user && <><p className="eyebrow">YOUR PROJECTS</p><button className="assistant" onClick={() => void createProject()}><span>＋</span><span>New Project ({projects.length}/{planUsage?.usage.projects.limit ?? 3})</span></button>{projects.map((project) => <div className="project-row" key={project.id}><button className={activeProjectId === project.id ? "assistant selected" : "assistant"} onClick={() => { setActiveProjectId(project.id); startNewConversation(); }}><span>▣</span><span>{project.name}</span></button><button className="project-edit" title="Edit Project" onClick={() => void editProject(project)}>✎</button><button className="project-edit" title="Delete Project" onClick={() => void deleteProject(project)}>×</button></div>)}</>}
+        {session?.user && <><p className="eyebrow">YOUR PROJECTS</p><button className="assistant" onClick={() => { void createProject(); setMobileNavOpen(false); }}><span>＋</span><span>New Project ({projects.length}/{planUsage?.usage.projects.limit ?? 3})</span></button>{projects.map((project) => <div className="project-row" key={project.id}><button className={activeProjectId === project.id ? "assistant selected" : "assistant"} onClick={() => { setActiveProjectId(project.id); startNewConversation(); setMobileNavOpen(false); }}><span>▣</span><span>{project.name}</span></button><button className="project-edit" title="Edit Project" onClick={() => void editProject(project)}>✎</button><button className="project-edit" title="Delete Project" onClick={() => void deleteProject(project)}>×</button></div>)}</>}
         <p className="eyebrow">SPECIALIST ASSISTANTS</p>
-        {assistants.map((item) => <button key={item.id} className={assistant === item.id ? "assistant selected" : "assistant"} onClick={() => { setAssistant(item.id); startNewConversation(); }}><span>{item.icon}</span><span>{item.name}</span></button>)}
+        {assistants.map((item) => <button key={item.id} className={assistant === item.id ? "assistant selected" : "assistant"} onClick={() => { setAssistant(item.id); startNewConversation(); setMobileNavOpen(false); }}><span>{item.icon}</span><span>{item.name}</span></button>)}
         <div className="sidebarfoot">One Platform.<br />Multiple Intelligences.</div>
       </aside>
       <section className="main">
         <header>
-          <div><span className="eyebrow">NEXORA AI WORKSPACE</span><h1>{assistants.find((item) => item.id === assistant)?.name}</h1></div>
+          <div className="workspace-heading"><button className="mobile-menu-button" aria-label="Open navigation" aria-expanded={mobileNavOpen} onClick={() => setMobileNavOpen(true)}>☰</button><div><span className="eyebrow">NEXORA AI WORKSPACE</span><h1>{assistants.find((item) => item.id === assistant)?.name}</h1></div></div>
           <div className="account-actions">
             {isPending ? <span className="status">CHECKING SESSION</span> : session?.user ? <><span className="account-email">{session.user.email}</span>{session.user.email?.toLowerCase() === "golf90002000@gmail.com" && <Link className="account-button primary" href="/admin">Admin console</Link>}<button className="account-button" onClick={signOut}>Sign out</button></> : <><Link className="account-button" href="/sign-in">Sign in</Link><Link className="account-button primary" href="/sign-up">Create account</Link></>}
           </div>

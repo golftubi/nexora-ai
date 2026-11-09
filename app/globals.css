@@ -16,3 +16,118 @@
 .project-row{display:flex;align-items:center;gap:3px}.project-row .assistant{flex:1;min-width:0}.project-row .assistant span:last-child{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.project-edit{flex-shrink:0;border:1px solid transparent;background:transparent;color:#7f94ad;border-radius:6px;padding:7px 8px;font-size:12px;cursor:pointer}.project-edit:hover{border-color:#ffffff20;background:#14283c;color:#bceeff}
 
 .project-context{padding:10px 12px;border:1px solid #ffffff18;border-radius:10px;background:#102235}.project-context strong{display:block}.project-context p{margin:6px 0 0!important;color:#a9bdcf!important;font-size:11px!important;line-height:1.5}
+
+
+/* Responsive workspace: desktop, tablet, mobile and safe-area layouts */
+html{min-width:320px;scroll-padding-top:16px}
+body{min-width:320px;min-height:100%;-webkit-text-size-adjust:100%;text-size-adjust:100%}
+button,a,textarea,input{touch-action:manipulation}
+button,a{ -webkit-tap-highlight-color:transparent }
+.shell{min-height:100vh;min-height:100dvh}
+.sidebar{position:sticky;top:0;height:100vh;height:100dvh;overflow-y:auto;overscroll-behavior:contain}
+.main{min-height:100vh;min-height:100dvh}
+.chat{min-height:220px}
+.messages{min-width:0}
+.message{min-width:0;overflow-wrap:anywhere}
+.markdown-body{min-width:0}
+.markdown-body pre{max-width:100%;overflow-x:auto}
+.composer{padding-bottom:max(27px,env(safe-area-inset-bottom))}
+@media(min-width:761px) and (max-width:1100px){
+  .sidebar{width:245px;padding:24px 15px}
+  .main{padding:25px 24px 20px}
+  .account-email{max-width:130px}
+  .welcome{max-width:540px}
+  .admin-sidebar{width:215px}
+  .admin-content{padding:28px 22px 20px}
+}
+@media(max-width:760px){
+  .shell{display:flex;flex-direction:column;min-height:100vh;min-height:100dvh}
+  .sidebar{position:relative;top:auto;width:100%;height:auto;max-height:43vh;max-height:43dvh;overflow-y:auto;overflow-x:hidden;padding:12px 14px 10px;border-right:0;border-bottom:1px solid #ffffff18;display:flex;flex-direction:column;gap:2px}
+  .brand{justify-content:flex-start;margin:0 0 10px;gap:10px}
+  .brand>div{display:block}
+  .brandmark{width:34px;height:34px;font-size:20px;border-radius:10px}
+  .brand b{font-size:15px}
+  .brand small{font-size:7px}
+  .new{display:block;width:100%;margin:0 0 10px;padding:11px 12px;min-height:42px}
+  .sidebar .eyebrow{display:block;margin:12px 0 5px 3px;font-size:9px}
+  .navactive{display:block;margin:0 0 6px;padding:9px;font-size:12px}
+  .conversation-history{max-height:110px;margin-bottom:7px}
+  .history-item{padding:8px 9px;min-height:42px}
+  .assistant{display:flex;justify-content:flex-start;gap:10px;width:100%;min-height:42px;padding:9px 10px;font-size:12px}
+  .assistant span:first-child{font-size:16px;min-width:20px;text-align:center}
+  .assistant span:last-child{display:block;min-width:0;overflow-wrap:anywhere}
+  .project-row{min-height:40px}
+  .project-row .assistant{flex:1}
+  .project-edit{min-width:38px;min-height:38px}
+  .sidebarfoot{display:none}
+  .main{width:100%;min-height:57vh;min-height:57dvh;padding:15px 13px max(12px,env(safe-area-inset-bottom))}
+  .main header{align-items:flex-start;gap:12px;padding-bottom:13px}
+  .main header>div:first-child{min-width:0;flex:1}
+  .main h1{font-size:17px;overflow-wrap:anywhere}
+  .eyebrow{font-size:9px;letter-spacing:1.3px}
+  .account-actions{justify-content:flex-end;flex-wrap:wrap;max-width:58%;gap:6px}
+  .account-email{display:none}
+  .account-button{min-height:38px;padding:8px 10px;font-size:10px;white-space:nowrap}
+  .chat{flex:1;min-height:240px;align-items:flex-start;padding:22px 0}
+  .welcome{width:100%;max-width:590px;margin:auto}
+  .orb{width:54px;height:54px;border-radius:18px;margin-bottom:17px;font-size:24px}
+  .welcome h2{font-size:clamp(27px,7vw,34px);letter-spacing:-1px}
+  .welcome>p{font-size:13px;line-height:1.55}
+  .suggestions{display:grid;grid-template-columns:1fr;gap:8px;margin-top:22px}
+  .suggestions button{width:100%;min-height:42px;text-align:left;padding:11px 13px;font-size:12px}
+  .free-usage{gap:8px;font-size:10px}
+  .project-context{text-align:left;overflow-wrap:anywhere}
+  .messages{padding:8px 0 24px}
+  .message{max-width:100%;margin:12px 0;padding:13px 14px}
+  .message p,.markdown-body,.markdown-body p{font-size:13px;line-height:1.7}
+  .composer{position:sticky;bottom:0;z-index:5;width:100%;max-width:100%;padding:12px 54px 30px 13px;border-radius:13px;background:#111c2cf2;backdrop-filter:blur(14px)}
+  .composer textarea{font-size:16px;min-height:48px;max-height:30vh}
+  .composer button{right:11px;top:11px;width:38px;height:38px}
+  .composer small{left:14px;bottom:8px;font-size:9px}
+  .auth-shell{min-height:100vh;min-height:100dvh;padding:max(16px,env(safe-area-inset-top)) 14px max(16px,env(safe-area-inset-bottom))}
+  .auth-card{width:100%;max-width:440px;padding:27px 21px}
+  .admin-shell{display:flex;flex-direction:column;min-height:100vh;min-height:100dvh}
+  .admin-sidebar{position:sticky;top:0;z-index:10;width:100%;height:auto;padding:10px 12px;display:flex;flex-direction:row;align-items:center;gap:8px;border-right:0;border-bottom:1px solid #ffffff18;overflow-x:auto;overflow-y:hidden}
+  .admin-brand{flex-shrink:0;justify-content:flex-start;margin:0 8px 0 0}
+  .admin-brand .admin-mark{width:32px;height:32px}
+  .admin-brand>span:last-child{display:block}
+  .admin-brand b{font-size:13px}
+  .admin-brand small{font-size:7px}
+  .admin-nav-label,.admin-sidebar-bottom{display:none}
+  .admin-nav{display:inline-flex;align-items:center;flex-shrink:0;white-space:nowrap;padding:10px 11px;margin:0;font-size:11px;min-height:40px}
+  .admin-content{width:100%;padding:20px 13px max(16px,env(safe-area-inset-bottom))}
+  .admin-header{gap:12px;padding-bottom:17px}
+  .admin-header-actions{width:100%;justify-content:space-between;gap:8px}
+  .admin-live{font-size:8px;padding:8px}
+  .admin-metrics{grid-template-columns:repeat(2,minmax(0,1fr));gap:9px;margin:16px 0}
+  .admin-metric{min-width:0;padding:12px}
+  .admin-metric>span{font-size:9px;line-height:1.4}
+  .admin-metric strong{font-size:21px;overflow-wrap:anywhere}
+  .admin-metric small{font-size:8px;overflow-wrap:anywhere}
+  .admin-grid{grid-template-columns:minmax(0,1fr);gap:10px;margin-bottom:10px}
+  .admin-panel{min-width:0;padding:13px}
+  .admin-panel-heading{align-items:flex-start;flex-wrap:wrap}
+  .admin-panel-heading h2{font-size:15px}
+  .admin-table-wrap{max-width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch}
+  .admin-table-wrap table{min-width:430px}
+  .admin-footer{font-size:8px;line-height:1.6}
+}
+@media(max-width:380px){
+  .sidebar{max-height:40vh;max-height:40dvh;padding:10px}
+  .main{padding-left:10px;padding-right:10px}
+  .account-actions{max-width:62%}
+  .account-button{padding:7px 8px;font-size:9px}
+  .admin-content{padding-left:10px;padding-right:10px}
+  .admin-metric{padding:10px}
+  .admin-metric strong{font-size:19px}
+}
+@media(orientation:landscape) and (max-height:500px) and (max-width:900px){
+  .sidebar{max-height:38vh;max-height:38dvh}
+  .main{min-height:62vh;min-height:62dvh}
+  .chat{min-height:150px;padding:10px 0}
+  .orb{display:none}
+  .welcome h2{font-size:25px;margin:8px 0}
+}
+@media(prefers-reduced-motion:reduce){
+  *,*::before,*::after{scroll-behavior:auto!important;animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}
+}

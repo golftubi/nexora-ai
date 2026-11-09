@@ -11,10 +11,18 @@
     "db:auth:migrate": "npx auth@1.7.18 migrate --config ./lib/auth.ts --yes",
     "db:app:migrate": "psql \"$DATABASE_URL\" -f db/schema.sql",
     "db:migrate": "node scripts/migrate-db.mjs",
-    "prebuild": "node scripts/migrate-db.mjs"
+    "prebuild": "node scripts/migrate-db.mjs",
+    "cap:add:android": "cap add android",
+    "cap:add:ios": "cap add ios",
+    "cap:sync": "cap sync",
+    "cap:open:android": "cap open android",
+    "cap:open:ios": "cap open ios"
   },
   "dependencies": {
     "@ai-sdk/react": "^3.0.0",
+    "@capacitor/core": "^7.0.0",
+    "@capacitor/android": "^7.0.0",
+    "@capacitor/ios": "^7.0.0",
     "ai": "^6.0.0",
     "better-auth": "^1.7.0",
     "next": "^15.5.0",
@@ -23,6 +31,7 @@
     "react-dom": "^19.1.0"
   },
   "devDependencies": {
+    "@capacitor/cli": "^7.0.0",
     "@types/node": "^22.0.0",
     "@types/pg": "^8.15.5",
     "@types/react": "^19.0.0",

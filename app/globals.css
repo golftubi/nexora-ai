@@ -305,3 +305,20 @@ button,a{ -webkit-tap-highlight-color:transparent }
   .sidebar .conversation-history .history-item span{display:block!important;color:#087fa5;font-size:10px;font-weight:700}
   .sidebar .conversation-history .history-item small{display:block!important;color:#52657a;font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;width:100%}
 }
+
+/* Improve automatic system-theme support and readable emphasis in Light Mode. */
+:root,html,body{color-scheme:light dark}
+body,.shell,.sidebar,.main,.auth-shell,.admin-shell{transition:background-color .18s ease,color .18s ease}
+@media(prefers-color-scheme:light){
+  .markdown-body strong,
+  .markdown-body b,
+  .markdown-body p strong,
+  .markdown-body li strong,
+  .markdown-body blockquote strong{color:#14243a!important;font-weight:700!important}
+  .markdown-body em{color:#40546b}
+  .markdown-body th{color:#263449}
+  .markdown-body td{color:#33465e}
+  .message p,.markdown-body{color:#263449}
+  .sidebar .assistant,.history-feedback,.account-email{color:#40546b}
+  .eyebrow,.sidebar .eyebrow,.admin-kicker,.admin-nav-label{color:#586b82}
+}

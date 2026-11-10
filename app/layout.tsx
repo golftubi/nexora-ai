@@ -7,7 +7,13 @@ export const metadata: Metadata = {
   description: "A modular AI workspace with specialist assistants.",
   applicationName: "Nexora AI",
   appleWebApp: { capable: true, title: "Nexora AI", statusBarStyle: "black-translucent" },
-  icons: { icon: [{ url: "/icons/nexora-icon.svg", type: "image/svg+xml" }], apple: [{ url: "/icons/nexora-icon.svg", type: "image/svg+xml" }] },
+  icons: {
+    icon: [
+      { url: "/icons/nexora-icon-192.png", type: "image/png", sizes: "192x192" },
+      { url: "/icons/nexora-icon-512.png", type: "image/png", sizes: "512x512" }
+    ],
+    apple: [{ url: "/icons/apple-touch-icon.png", type: "image/png", sizes: "180x180" }]
+  },
 };
 
 export const viewport: Viewport = {

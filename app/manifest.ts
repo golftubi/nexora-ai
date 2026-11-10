@@ -15,7 +15,7 @@ export default function manifest(): MetadataRoute.Manifest {
     theme_color: "#080d18",
     categories: ["productivity", "utilities"],
     icons: [
-      { src: "/icons/nexora-icon.svg", sizes: "any", type: "image/svg+xml", purpose: "any maskable" }
+      { src: "/icons/nexora-icon.svg", sizes: "any", type: "image/svg+xml", purpose: "any" }
     ]
   };
 }

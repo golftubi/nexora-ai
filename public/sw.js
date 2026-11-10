@@ -1,6 +1,12 @@
-const CACHE_NAME = "nexora-shell-v1";
+const CACHE_NAME = "nexora-shell-v2";
 const OFFLINE_URL = "/offline.html";
-const PRECACHE_URLS = [OFFLINE_URL, "/icons/nexora-icon.svg"];
+const PRECACHE_URLS = [
+  OFFLINE_URL,
+  "/icons/nexora-icon.svg",
+  "/icons/nexora-icon-192.png",
+  "/icons/nexora-icon-512.png",
+  "/icons/apple-touch-icon.png"
+];
 
 self.addEventListener("install", (event) => {
   event.waitUntil(caches.open(CACHE_NAME).then((cache) => cache.addAll(PRECACHE_URLS)).then(() => self.skipWaiting()));

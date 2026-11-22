@@ -15,7 +15,7 @@ export async function GET(request: Request, context: { params: Promise<{ id: str
     );
     if (!conversation.rowCount) return Response.json({ error: "Conversation not found." }, { status: 404 });
     if (conversation.rows[0].assistantId === "security") {
-      const allowlist = (process.env.NEXORA_SECURITY_ADMIN_EMAILS || "").split(",").map(v => v.trim().toLowerCase()).filter(Boolean);
+      const allowlist = (process.env.NEXORA_SECURITY_ADMIN_EMAILS || process.env.NEXORA_ADMIN_EMAILS || "").split(",").map(v => v.trim().toLowerCase()).filter(Boolean);
       if (!allowlist.includes(session.user.email.toLowerCase())) return Response.json({ error: "Security & Intelligence access is restricted." }, { status: 403 });
     }
     const messages = await getDb().query(

@@ -41,6 +41,9 @@ export default function AdminDashboard() {
   const [directoryUsers, setDirectoryUsers] = useState<UserDirectoryItem[]>([]);
   const [userSearch, setUserSearch] = useState("");
   const [directoryError, setDirectoryError] = useState("");
+  const [roleDrafts, setRoleDrafts] = useState<Record<string, string>>({});
+  const [savingRole, setSavingRole] = useState<string | null>(null);
+  const [roleError, setRoleError] = useState("");
 
   async function toggleAssistant(id: string, enabled: boolean) {
     setUpdatingAssistant(id);
@@ -61,6 +64,29 @@ export default function AdminDashboard() {
       setAssistantError(cause instanceof Error ? cause.message : "Assistant update failed.");
     } finally {
       setUpdatingAssistant(null);
+    }
+  }
+
+  async function saveUserRole(user: UserDirectoryItem) {
+    const role = roleDrafts[user.id] ?? user.role;
+    if (role === user.role) return;
+    setSavingRole(user.id);
+    setRoleError("");
+    try {
+      const response = await fetch(`/api/admin/users/${user.id}/role`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ role }),
+      });
+      const payload = await response.json() as { error?: string };
+      if (!response.ok) throw new Error(payload.error || "Unable to update account role.");
+      setDirectoryUsers((current) => current.map((item) => item.id === user.id
+        ? { ...item, role, adminActive: role !== "user" } : item));
+      setRoleDrafts((current) => { const next = { ...current }; delete next[user.id]; return next; });
+    } catch (cause) {
+      setRoleError(cause instanceof Error ? cause.message : "Role update failed.");
+    } finally {
+      setSavingRole(null);
     }
   }
 
@@ -169,14 +195,24 @@ export default function AdminDashboard() {
             <div className="admin-table-wrap"><table><thead><tr><th>User account</th><th>Platform role</th><th>Plan</th><th>Conversations</th><th>Joined</th></tr></thead><tbody>
               {filteredUsers.map((user) => <tr key={user.id}>
                 <td><b>{user.name || "Nexora user"}</b><small>{user.email}</small></td>
-                <td><span className={user.role === "user" ? "admin-tag" : "admin-tag restricted"}>{user.role.replace("_", " ")}</span>{user.role !== "user" && !user.adminActive && <small className="admin-error">Admin access disabled</small>}</td>
+                <td>
+                  <span className={user.role === "user" ? "admin-tag" : "admin-tag restricted"}>{user.role.replace("_", " ")}</span>
+                  {user.role !== "user" && !user.adminActive && <small className="admin-error">Admin access disabled</small>}
+                  {data.administrator.role === "super_admin" && user.role !== "super_admin" && <div className="admin-role-editor">
+                    <select aria-label={`Role for ${user.email}`} value={roleDrafts[user.id] ?? user.role} onChange={(event) => setRoleDrafts((current) => ({ ...current, [user.id]: event.target.value }))}>
+                      <option value="user">General user</option><option value="admin">Admin</option><option value="support">Support</option><option value="analyst">Analyst</option>
+                    </select>
+                    <button className="admin-role-save" disabled={savingRole === user.id || (roleDrafts[user.id] ?? user.role) === user.role} onClick={() => void saveUserRole(user)}>{savingRole === user.id ? "Saving…" : "Save"}</button>
+                  </div>}
+                </td>
                 <td><b>{user.planName}</b><small>{user.subscriptionStatus === "none" ? "No subscription record" : user.subscriptionStatus}</small></td>
                 <td>{Number(user.conversationCount).toLocaleString()}</td>
                 <td>{new Date(user.createdAt).toLocaleDateString()}</td>
               </tr>)}
               {!filteredUsers.length && <tr><td colSpan={5}>No matching user accounts found.</td></tr>}
             </tbody></table></div>
-            <p className="admin-footnote">Directory is currently read-only. Role changes and account suspension will be enabled only after server-side access enforcement is implemented.</p>
+            <p className="admin-footnote">Super Admin can assign Admin, Support or Analyst roles. Role changes are enforced by server permissions and recorded in the audit log. Account suspension remains disabled pending full authentication enforcement.</p>
+            {roleError && <p className="admin-footnote admin-error">{roleError}</p>}
           </article>
         </section>
 

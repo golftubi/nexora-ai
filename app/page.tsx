@@ -5,12 +5,12 @@ import Link from "next/link";
 import { authClient } from "@/lib/auth-client";
 
 const assistants = [
-  { id: "general", name: "General Intelligence", desc: "Everyday reasoning, planning and problem-solving", icon: "✦" },
-  { id: "technology", name: "Technology & Developer", desc: "Software engineering, code and technical systems", icon: "⌘" },
-  { id: "business", name: "Business & Entrepreneurship", desc: "Strategy, operations and commercial decisions", icon: "◈" },
-  { id: "research", name: "Research & Documents", desc: "Research, analysis and structured documents", icon: "⌕" },
-  { id: "education", name: "Education & Learning", desc: "Explanations, tutoring and skill development", icon: "⌂" },
-  { id: "security", name: "Security & Intelligence", desc: "Restricted operational analysis workspace", icon: "⬡" },
+  { id: "general", name: "General Intelligence", desc: "Everyday reasoning, planning and problem-solving.", welcome: "A versatile assistant for everyday thinking.", prompts: ["Help me plan a project", "Explain a complex topic", "Compare two options"], icon: "✦" },
+  { id: "technology", name: "Technology & Developer", desc: "Software engineering, programming, debugging and technical systems.", welcome: "Design, build and troubleshoot technical solutions.", prompts: ["Review this software architecture", "Help me debug a technical issue", "Explain a programming concept"], icon: "⌘" },
+  { id: "business", name: "Business & Entrepreneurship", desc: "Business strategy, operations, pricing, finance fundamentals and growth.", welcome: "Turn business ideas into practical plans and decisions.", prompts: ["Develop a business model", "Review my pricing strategy", "Create a customer acquisition plan"], icon: "◈" },
+  { id: "research", name: "Research & Documents", desc: "Structured research, evidence assessment, analysis and professional documents.", welcome: "Research carefully and produce clear, well-structured work.", prompts: ["Prepare a research brief", "Compare evidence and assumptions", "Draft a professional report"], icon: "⌕" },
+  { id: "education", name: "Education & Learning", desc: "Step-by-step explanations, tutoring, study plans and skill development.", welcome: "Learn difficult subjects through clear, progressive explanations.", prompts: ["Teach me a topic from the beginning", "Create a study plan", "Test my understanding"], icon: "⌂" },
+  { id: "security", name: "Security & Intelligence", desc: "Lawful, defensive security analysis, incident assessment and intelligence reporting.", welcome: "Assess risks, organize information and develop safety-focused recommendations.", prompts: ["Prepare a security incident assessment", "Structure an intelligence report", "Review a site security risk"], icon: "⬡" },
 ];
 
 function renderInline(source: string): ReactNode[] {
@@ -382,17 +382,18 @@ export default function Home() {
         </header>
         <div className="chat">
           {messages.length === 0 ? <div className="welcome">
-            <div className="orb">✦</div><span className="eyebrow">INTELLIGENCE, CONNECTED</span>
-            <h2>What would you like<br />to work on today?</h2>
-            <p>Choose a specialist assistant and start a conversation.</p>
+            <div className="orb">{assistants.find((item) => item.id === assistant)?.icon || "✦"}</div><span className="eyebrow">{assistants.find((item) => item.id === assistant)?.name.toUpperCase()} WORKSPACE</span>
+            <h2>{assistant === "general" ? <>What would you like<br />to work on today?</> : <>Your specialist<br />workspace is ready.</>}</h2>
+            <p>{assistants.find((item) => item.id === assistant)?.welcome || assistants.find((item) => item.id === assistant)?.desc}</p>
+            <p className="specialist-description">{assistants.find((item) => item.id === assistant)?.desc}</p>
             {!session?.user && !isPending && <p className="signin-note">Create a free account or sign in to start chatting.</p>}
             {session?.user && <div className="free-usage"><span>{planUsage?.plan.name || "Nexora Free"}</span><span>{planUsage?.usage.messages.used ?? 0}/{planUsage?.usage.messages.limit ?? 20} daily messages</span></div>}
             {activeProjectId && <div className="project-context"><strong>Working in: {projects.find((project) => project.id === activeProjectId)?.name || "Project"}</strong><p>{projects.find((project) => project.id === activeProjectId)?.description || "No description added yet. Use Edit Project to add one."}</p>{projects.find((project) => project.id === activeProjectId)?.instructions && <p><b>Project instructions:</b> {projects.find((project) => project.id === activeProjectId)?.instructions}</p>}</div>}
-            <div className="suggestions">{["Help me plan a project", "Explain a complex topic", "Review a business idea"].map((item) => <button key={item} onClick={() => setInput(item)}>{item}　↗</button>)}</div>
-          </div> : <div className="messages">{messages.map((message, index) => <article className={message.role === "user" ? "message user" : "message"} key={index}><b>{message.role === "user" ? "YOU" : "NEXORA"}</b><div className="markdown-body">{message.role === "user" ? <p>{message.content}</p> : renderMarkdown(message.content)}</div></article>)}</div>}
+            <div className="suggestions">{(assistants.find((item) => item.id === assistant)?.prompts || []).map((item) => <button key={item} onClick={() => setInput(item)}>{item}　↗</button>)}</div>
+          </div> : <div className="messages">{messages.map((message, index) => <article className={message.role === "user" ? "message user" : "message"} key={index}><b>{message.role === "user" ? "YOU" : (assistants.find((item) => item.id === assistant)?.name || "NEXORA")}</b><div className="markdown-body">{message.role === "user" ? <p>{message.content}</p> : renderMarkdown(message.content)}</div></article>)}</div>}
         </div>
         <div className="composer">
-          <textarea value={input} onChange={(event) => setInput(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter" && !event.shiftKey) { event.preventDefault(); void send(); } }} placeholder={session?.user ? "Message Nexora AI..." : "Sign in to start a conversation..."} rows={2} />
+          <textarea value={input} onChange={(event) => setInput(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter" && !event.shiftKey) { event.preventDefault(); void send(); } }} placeholder={session?.user ? "Message " + (assistants.find((item) => item.id === assistant)?.name || "Nexora AI") + "..." : "Sign in to start a conversation..."} rows={2} />
           <button onClick={() => void send()} disabled={busy || !input.trim()}>{busy ? "…" : "↑"}</button>
           <small>AI can make mistakes. Verify important information.</small>
         </div>

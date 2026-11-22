@@ -16,6 +16,19 @@ type UserDirectoryItem = {
   conversationCount: number;
 };
 
+type AnalystData = {
+  administrator: { email: string; role: string };
+  period: string;
+  metrics: {
+    users: { total: number; newThisMonth: number };
+    conversations: { total: number; last30Days: number };
+    messages: { total: number };
+    usage: { inputTokens: number; outputTokens: number; estimatedCost: string | null; requests: number };
+  };
+  assistants: { id: string; name: string; enabled: boolean }[];
+  events: { id: string; action: string; resourceType: string | null; resourceId: string | null; metadata: unknown; createdAt: string; actorEmail: string | null }[];
+};
+
 type DashboardData = {
   administrator: { email: string; role: string };
   metrics: {
@@ -50,6 +63,7 @@ export default function AdminDashboard() {
   const [savingRole, setSavingRole] = useState<string | null>(null);
   const [roleError, setRoleError] = useState("");
   const [supportMode, setSupportMode] = useState(false);
+  const [analystData, setAnalystData] = useState<AnalystData | null>(null);
 
   async function toggleAssistant(id: string, enabled: boolean) {
     setUpdatingAssistant(id);
@@ -138,17 +152,32 @@ export default function AdminDashboard() {
       })
       .then((payload) => { if (!cancelled) setData(payload); })
       .catch(async (cause) => {
-        // Support roles intentionally lack admin:read but may read the user directory.
+        // Analysts have analytics and audit permissions, but intentionally lack admin:read and users:read.
         try {
-          const response = await fetch("/api/admin/users?limit=200", { cache: "no-store" });
-          const payload = await response.json() as { users?: UserDirectoryItem[]; error?: string };
-          if (!response.ok) throw new Error(payload.error || "User directory access denied.");
-          if (!cancelled) {
-            setDirectoryUsers(payload.users || []);
-            setSupportMode(true);
-          }
+          const [analyticsResponse, auditResponse] = await Promise.all([
+            fetch("/api/admin/analytics", { cache: "no-store" }),
+            fetch("/api/admin/audit", { cache: "no-store" }),
+          ]);
+          const [analytics, audit] = await Promise.all([
+            analyticsResponse.json(),
+            auditResponse.json(),
+          ]);
+          if (!analyticsResponse.ok || !auditResponse.ok) throw new Error("Analyst workspace access denied.");
+          if (!cancelled) setAnalystData({ ...analytics, events: audit.events || [] } as AnalystData);
+          return;
         } catch {
-          if (!cancelled) setError(cause instanceof Error ? cause.message : "Dashboard request failed.");
+          // Support roles intentionally lack admin:read but may read the user directory.
+          try {
+            const response = await fetch("/api/admin/users?limit=200", { cache: "no-store" });
+            const payload = await response.json() as { users?: UserDirectoryItem[]; error?: string };
+            if (!response.ok) throw new Error(payload.error || "User directory access denied.");
+            if (!cancelled) {
+              setDirectoryUsers(payload.users || []);
+              setSupportMode(true);
+            }
+          } catch {
+            if (!cancelled) setError(cause instanceof Error ? cause.message : "Dashboard request failed.");
+          }
         }
       })
       .finally(() => { if (!cancelled) setLoading(false); });
@@ -196,6 +225,52 @@ export default function AdminDashboard() {
   }
 
   if (loading) return <main className="admin-shell"><div className="admin-loading">Loading Nexora administration…</div></main>;
+
+  if (analystData && !data) return (
+    <main className="admin-shell">
+      <aside className="admin-sidebar">
+        <Link href="/" className="admin-brand"><span className="admin-mark">N</span><span><b>NEXORA</b><small>ANALYST WORKSPACE</small></span></Link>
+        <div className="admin-nav-label">INSIGHTS</div>
+        <a className="admin-nav active" href="#analyst-metrics">Platform analytics</a>
+        <a className="admin-nav" href="#analyst-audit">Audit activity</a>
+        <div className="admin-sidebar-bottom"><span>Signed in as</span><b>{analystData.administrator.email}</b><small>ANALYST</small></div>
+      </aside>
+      <section className="admin-content" id="analyst-metrics">
+        <header className="admin-header">
+          <div><span className="admin-kicker">NEXORA AI · ANALYTICS</span><h1>Platform insights</h1><p>Read-only operational metrics and governance activity.</p></div>
+          <div className="admin-header-actions"><Link href="/" className="admin-workspace-link">Open workspace ↗</Link></div>
+        </header>
+        <section className="admin-metrics">
+          {[
+            { label: "Registered users", value: number(analystData.metrics.users.total), note: `+${number(analystData.metrics.users.newThisMonth)} in the last 30 days` },
+            { label: "Conversations", value: number(analystData.metrics.conversations.total), note: `${number(analystData.metrics.conversations.last30Days)} in the last 30 days` },
+            { label: "Messages", value: number(analystData.metrics.messages.total), note: "Persisted chat messages" },
+            { label: "AI requests · 30 days", value: number(analystData.metrics.usage.requests), note: `${number(analystData.metrics.usage.inputTokens)} input / ${number(analystData.metrics.usage.outputTokens)} output tokens` },
+          ].map((card) => <article className="admin-metric" key={card.label}><span>{card.label}</span><strong>{card.value}</strong><small>{card.note}</small></article>)}
+        </section>
+        <section className="admin-grid">
+          <article className="admin-panel">
+            <div className="admin-panel-heading"><div><span className="admin-kicker">MODEL METERING</span><h2>Usage & estimated cost</h2></div><span className="admin-count">Last 30 days</span></div>
+            <div className="admin-usage">
+              <div><span>Input tokens</span><b>{number(analystData.metrics.usage.inputTokens)}</b></div>
+              <div><span>Output tokens</span><b>{number(analystData.metrics.usage.outputTokens)}</b></div>
+              <div><span>Estimated cost (USD)</span><b>{analystData.metrics.usage.estimatedCost === null ? "Not metered" : number(analystData.metrics.usage.estimatedCost)}</b></div>
+            </div>
+            <p className="admin-footnote">Read-only metrics. Estimated cost is not an invoice.</p>
+          </article>
+          <article className="admin-panel">
+            <div className="admin-panel-heading"><div><span className="admin-kicker">ASSISTANT DIRECTORY</span><h2>Assistant availability</h2></div><span className="admin-count">{analystData.assistants.length} assistants</span></div>
+            <div className="admin-audit-list">{analystData.assistants.map((item) => <div key={item.id}><b>{item.name}</b><span>{item.enabled ? "Enabled" : "Disabled"}</span></div>)}</div>
+          </article>
+          <article className="admin-panel" id="analyst-audit">
+            <div className="admin-panel-heading"><div><span className="admin-kicker">SECURITY & GOVERNANCE</span><h2>Recent audit activity</h2></div><span className="admin-count">Latest 100 events</span></div>
+            {analystData.events.length ? <div className="admin-audit-list">{analystData.events.map((item) => <div key={item.id}><b>{item.action}</b><span>{item.actorEmail || "System"} · {item.resourceType || "Platform"} · {new Date(item.createdAt).toLocaleString()}</span></div>)}</div> : <p className="admin-empty">No audit events recorded yet.</p>}
+          </article>
+        </section>
+        <footer className="admin-footer">NEXORA AI · ONE PLATFORM. MULTIPLE INTELLIGENCES. <span>Analyst access is read-only.</span></footer>
+      </section>
+    </main>
+  );
 
   if (supportMode && !data) return (
     <main className="admin-shell">

@@ -268,6 +268,7 @@ export default function AdminDashboard() {
         <div className="admin-nav-label">MANAGEMENT</div>
         <a className="admin-nav active" href="#overview">▦　Overview</a>
         <a className="admin-nav" href="#assistants">✦　Assistants</a>
+        <a className="admin-nav" href="#access-control">♢　Access control</a>
         <a className="admin-nav" href="#users">♙　Users</a>
         <a className="admin-nav" href="#usage">◷　Usage & costs</a>
         <a className="admin-nav" href="#activity">≡　Audit activity</a>
@@ -301,6 +302,33 @@ export default function AdminDashboard() {
             {assistantError && <p className="admin-footnote admin-error">{assistantError}</p>}
             {descriptionError && <p className="admin-footnote admin-error">{descriptionError}</p>}
             <p className="admin-footnote">Descriptions and availability changes are recorded in the audit log. Access levels are displayed read-only; Security & Intelligence remains protected by its separate server-side email allowlist.</p>
+          </article>
+
+          <article className="admin-panel" id="access-control">
+            <div className="admin-panel-heading"><div><span className="admin-kicker">SECURITY & GOVERNANCE</span><h2>Access control</h2></div><span className="admin-count">Role permissions</span></div>
+            <p className="admin-footnote">Permissions are enforced by the server. This matrix reflects the current role policy; it does not grant permissions by itself.</p>
+            <div className="admin-table-wrap"><table><thead><tr><th>Platform role</th><th>Admin overview</th><th>User directory</th><th>Manage roles</th><th>Manage assistants</th><th>Analytics</th><th>Audit logs</th></tr></thead><tbody>
+              {[
+                { role: "Super Admin", permissions: ["admin:read", "users:read", "roles:manage", "assistants:manage", "analytics:read", "audit:read"] },
+                { role: "Admin", permissions: ["admin:read", "users:read", "assistants:manage", "analytics:read", "audit:read"] },
+                { role: "Support", permissions: ["users:read"] },
+                { role: "Analyst", permissions: ["analytics:read", "audit:read"] },
+                { role: "General user", permissions: [] },
+              ].map((item) => <tr key={item.role}>
+                <td><b>{item.role}</b></td>
+                {["admin:read", "users:read", "roles:manage", "assistants:manage", "analytics:read", "audit:read"].map((permission) => <td key={permission}><span className={item.permissions.includes(permission) ? "admin-status enabled" : "admin-status disabled"}>{item.permissions.includes(permission) ? "Allowed" : "—"}</span></td>)}
+              </tr>)}
+            </tbody></table></div>
+            <div className="admin-panel-heading admin-access-subheading"><div><span className="admin-kicker">PRIVILEGED ACCOUNTS</span><h2>Administrator directory</h2></div><span className="admin-count">{directoryUsers.filter((user) => user.role !== "user").length} assigned</span></div>
+            <div className="admin-table-wrap"><table><thead><tr><th>Account</th><th>Role</th><th>Access status</th></tr></thead><tbody>
+              {directoryUsers.filter((user) => user.role !== "user").map((user) => <tr key={user.id}>
+                <td><b>{user.name || "Nexora administrator"}</b><small>{user.email}</small></td>
+                <td><span className="admin-tag restricted">{user.role.replace("_", " ")}</span></td>
+                <td><span className={user.adminActive ? "admin-status enabled" : "admin-status disabled"}>{user.adminActive ? "Active" : "Inactive"}</span></td>
+              </tr>)}
+              {!directoryUsers.some((user) => user.role !== "user") && <tr><td colSpan={3}>No delegated administrator accounts found.</td></tr>}
+            </tbody></table></div>
+            <p className="admin-footnote">Super Admin accounts are protected from role changes in this console. Account suspension controls remain unavailable until authentication-session enforcement is implemented. Security & Intelligence continues to use its separate server-side email allowlist.</p>
           </article>
 
           <article className="admin-panel admin-users-panel" id="users">

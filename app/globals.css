@@ -322,3 +322,21 @@ body,.shell,.sidebar,.main,.auth-shell,.admin-shell{transition:background-color 
   .sidebar .assistant,.history-feedback,.account-email{color:#40546b}
   .eyebrow,.sidebar .eyebrow,.admin-kicker,.admin-nav-label{color:#586b82}
 }
+
+
+/* Admin user directory */
+.admin-user-tools{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:14px 0}
+.admin-user-tools input{width:min(100%,390px);min-height:40px;padding:10px 12px;border:1px solid #ffffff24;border-radius:8px;background:#0b1422;color:#eef3ff;font:12px 'DM Sans';outline:none}
+.admin-user-tools input:focus{border-color:#68d7f4}
+.admin-user-tools>span{font-size:10px;color:#8293aa;white-space:nowrap}
+.admin-users-panel .admin-table-wrap table{min-width:690px}
+.admin-error{color:#e58b96!important}
+@media(prefers-color-scheme:light){
+  .admin-user-tools input{background:#f8fafc;border-color:#d5dee8;color:#17253a}
+  .admin-user-tools>span{color:#64748b}
+  .admin-error{color:#b42335!important}
+}
+@media(max-width:760px){
+  .admin-user-tools{align-items:stretch;flex-direction:column}
+  .admin-user-tools input{width:100%;min-height:44px;font-size:14px}
+}

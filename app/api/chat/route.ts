@@ -31,7 +31,7 @@ export async function POST(req: Request) {
     if (!assistantStatus.rows[0]?.enabled) return Response.json({ error: "This assistant is currently unavailable." }, { status: 403 });
 
     if (assistant === "security") {
-      const allowedEmails = (process.env.NEXORA_SECURITY_ADMIN_EMAILS || "")
+      const allowedEmails = (process.env.NEXORA_SECURITY_ADMIN_EMAILS || process.env.NEXORA_ADMIN_EMAILS || "")
         .split(",").map((value) => value.trim().toLowerCase()).filter(Boolean);
       if (!allowedEmails.includes(session.user.email.toLowerCase())) {
         return Response.json({ error: "Security & Intelligence access is restricted. Contact the Nexora administrator." }, { status: 403 });

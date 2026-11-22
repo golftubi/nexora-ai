@@ -351,3 +351,11 @@ body,.shell,.sidebar,.main,.auth-shell,.admin-shell{transition:background-color 
   .admin-role-editor select{background:#fff;border-color:#cbd5e1;color:#17253a}
   .admin-role-save{background:#e8f5fa;color:#14516b;border-color:#a8cfdf}
 }
+
+
+/* Admin directory filters and controlled CSV export */
+.admin-user-tools select,.admin-export-button{min-height:40px;padding:9px 11px;border:1px solid #ffffff24;border-radius:8px;background:#0b1422;color:#eef3ff;font:12px 'DM Sans';}
+.admin-export-button{border-color:#4d9ab2;background:#12394a;color:#c7f1fb;font-weight:700;cursor:pointer;white-space:nowrap}
+.admin-export-button:hover{background:#17485b}
+@media(prefers-color-scheme:light){.admin-user-tools select{background:#f8fafc;border-color:#d5dee8;color:#17253a}.admin-export-button{background:#e8f5fa;color:#14516b;border-color:#a8cfdf}}
+@media(max-width:760px){.admin-user-tools select,.admin-export-button{width:100%;min-height:44px;font-size:14px}}

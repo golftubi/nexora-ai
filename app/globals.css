@@ -359,3 +359,20 @@ body,.shell,.sidebar,.main,.auth-shell,.admin-shell{transition:background-color 
 .admin-export-button:hover{background:#17485b}
 @media(prefers-color-scheme:light){.admin-user-tools select{background:#f8fafc;border-color:#d5dee8;color:#17253a}.admin-export-button{background:#e8f5fa;color:#14516b;border-color:#a8cfdf}}
 @media(max-width:760px){.admin-user-tools select,.admin-export-button{width:100%;min-height:44px;font-size:14px}}
+
+
+/* Specialist catalogue editing */
+.admin-specialist-description{display:block;width:min(100%,360px);min-height:68px;margin-top:7px;padding:9px 10px;resize:vertical;border:1px solid #ffffff24;border-radius:8px;background:#0b1422;color:#eaf2ff;font:11px/1.55 'DM Sans',sans-serif;outline:none}
+.admin-specialist-description:focus{border-color:#68d7f4}
+.admin-specialist-edit{display:flex;align-items:center;gap:9px;flex-wrap:wrap;margin-top:6px}
+.admin-specialist-edit small,.admin-specialist-note{display:block;color:#8293aa;font-size:9px;line-height:1.5}
+.admin-specialist-note{max-width:130px;margin-top:6px}
+@media(prefers-color-scheme:light){
+  .admin-specialist-description{background:#f8fafc;border-color:#d5dee8;color:#17253a}
+  .admin-specialist-edit small,.admin-specialist-note{color:#64748b}
+}
+@media(max-width:760px){
+  .admin-specialist-description{width:100%;min-width:240px;font-size:13px}
+  .admin-specialist-edit{align-items:stretch;flex-direction:column}
+  .admin-specialist-edit .admin-role-save{min-height:38px}
+}

@@ -44,6 +44,7 @@ export default function AdminDashboard() {
   const [roleDrafts, setRoleDrafts] = useState<Record<string, string>>({});
   const [savingRole, setSavingRole] = useState<string | null>(null);
   const [roleError, setRoleError] = useState("");
+  const [supportMode, setSupportMode] = useState(false);
 
   async function toggleAssistant(id: string, enabled: boolean) {
     setUpdatingAssistant(id);
@@ -105,7 +106,20 @@ export default function AdminDashboard() {
         return payload as DashboardData;
       })
       .then((payload) => { if (!cancelled) setData(payload); })
-      .catch((cause) => { if (!cancelled) setError(cause instanceof Error ? cause.message : "Dashboard request failed."); })
+      .catch(async (cause) => {
+        // Support roles intentionally lack admin:read but may read the user directory.
+        try {
+          const response = await fetch("/api/admin/users?limit=200", { cache: "no-store" });
+          const payload = await response.json() as { users?: UserDirectoryItem[]; error?: string };
+          if (!response.ok) throw new Error(payload.error || "User directory access denied.");
+          if (!cancelled) {
+            setDirectoryUsers(payload.users || []);
+            setSupportMode(true);
+          }
+        } catch {
+          if (!cancelled) setError(cause instanceof Error ? cause.message : "Dashboard request failed.");
+        }
+      })
       .finally(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
   }, [isPending, session?.user?.id]);
@@ -131,6 +145,43 @@ export default function AdminDashboard() {
   );
 
   if (loading) return <main className="admin-shell"><div className="admin-loading">Loading Nexora administration…</div></main>;
+
+  if (supportMode && !data) return (
+    <main className="admin-shell">
+      <aside className="admin-sidebar">
+        <Link href="/" className="admin-brand"><span className="admin-mark">N</span><span><b>NEXORA</b><small>SUPPORT WORKSPACE</small></span></Link>
+        <div className="admin-nav-label">SUPPORT</div>
+        <a className="admin-nav active" href="#support-users">♙　User directory</a>
+        <div className="admin-sidebar-bottom"><span>Signed in as</span><b>{session?.user?.email}</b><small>SUPPORT</small></div>
+      </aside>
+      <section className="admin-content" id="support-users">
+        <header className="admin-header">
+          <div><span className="admin-kicker">NEXORA AI · SUPPORT</span><h1>User directory</h1><p>Read-only account lookup for authorised support operations.</p></div>
+          <div className="admin-header-actions"><Link href="/" className="admin-workspace-link">Open workspace ↗</Link></div>
+        </header>
+        <article className="admin-panel admin-users-panel">
+          <div className="admin-panel-heading"><div><span className="admin-kicker">ACCOUNTS</span><h2>Registered users</h2></div><span className="admin-count">{directoryUsers.length} accounts loaded</span></div>
+          <div className="admin-user-tools">
+            <input aria-label="Search users" value={userSearch} onChange={(event) => setUserSearch(event.target.value)} placeholder="Search name, email, role or plan…" />
+            <span>{filteredUsers.length} matching users</span>
+          </div>
+          {directoryError && <p className="admin-footnote admin-error">{directoryError}</p>}
+          <div className="admin-table-wrap"><table><thead><tr><th>User account</th><th>Platform role</th><th>Plan</th><th>Conversations</th><th>Joined</th></tr></thead><tbody>
+            {filteredUsers.map((user) => <tr key={user.id}>
+              <td><b>{user.name || "Nexora user"}</b><small>{user.email}</small></td>
+              <td><span className={user.role === "user" ? "admin-tag" : "admin-tag restricted"}>{user.role.replace("_", " ")}</span></td>
+              <td><b>{user.planName}</b><small>{user.subscriptionStatus === "none" ? "No subscription record" : user.subscriptionStatus}</small></td>
+              <td>{Number(user.conversationCount).toLocaleString()}</td>
+              <td>{new Date(user.createdAt).toLocaleDateString()}</td>
+            </tr>)}
+            {!filteredUsers.length && <tr><td colSpan={5}>No matching user accounts found.</td></tr>}
+          </tbody></table></div>
+          <p className="admin-footnote">Support access is read-only. Role changes, assistant controls, analytics and platform settings are not available to this account.</p>
+        </article>
+        <footer className="admin-footer">NEXORA AI · ONE PLATFORM. MULTIPLE INTELLIGENCES. <span>Support access is permission-restricted.</span></footer>
+      </section>
+    </main>
+  );
 
   if (error || !data) return (
     <main className="admin-shell">

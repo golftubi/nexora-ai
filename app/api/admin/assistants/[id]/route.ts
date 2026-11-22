@@ -8,7 +8,7 @@ const allowedIds = new Set(["general", "technology", "business", "research", "ed
 
 export async function PATCH(request: Request, context: { params: Promise<{ id: string }> }) {
   try {
-    const access = await requireAdmin(request);
+    const access = await requireAdmin(request, "assistants:manage");
     if ("response" in access) return access.response;
 
     const { id } = await context.params;

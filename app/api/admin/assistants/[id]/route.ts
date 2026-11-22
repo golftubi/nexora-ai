@@ -14,12 +14,31 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
     const { id } = await context.params;
     if (!allowedIds.has(id)) return Response.json({ error: "Unknown assistant." }, { status: 404 });
 
-    const body = await request.json() as { enabled?: unknown };
-    if (typeof body.enabled !== "boolean") {
-      return Response.json({ error: "The enabled field must be true or false." }, { status: 400 });
+    const body = await request.json() as { enabled?: unknown; description?: unknown };
+    const db = getDb();
+
+    if (typeof body.description === "string") {
+      const description = body.description.trim();
+      if (description.length < 10 || description.length > 240) {
+        return Response.json({ error: "Description must be between 10 and 240 characters." }, { status: 400 });
+      }
+      const result = await db.query(
+        "UPDATE assistant_catalog SET description = $2 WHERE id = $1 RETURNING id, description",
+        [id, description],
+      );
+      if (!result.rowCount) return Response.json({ error: "Assistant not found." }, { status: 404 });
+      await db.query(
+        `INSERT INTO audit_logs (actor_user_id, action, resource_type, resource_id, metadata)
+         VALUES ($1, 'assistant.description_updated', 'assistant', $2, $3::jsonb)`,
+        [access.session.user.id, id, JSON.stringify({ description })],
+      );
+      return Response.json({ assistant: result.rows[0] });
     }
 
-    const db = getDb();
+    if (typeof body.enabled !== "boolean") {
+      return Response.json({ error: "Provide a valid description or an enabled true/false value." }, { status: 400 });
+    }
+
     const result = await db.query(
       "UPDATE assistant_catalog SET enabled = $2 WHERE id = $1 RETURNING id, name, enabled",
       [id, body.enabled],

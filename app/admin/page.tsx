@@ -38,6 +38,9 @@ export default function AdminDashboard() {
   const [error, setError] = useState("");
   const [updatingAssistant, setUpdatingAssistant] = useState<string | null>(null);
   const [assistantError, setAssistantError] = useState("");
+  const [descriptionDrafts, setDescriptionDrafts] = useState<Record<string, string>>({});
+  const [savingDescription, setSavingDescription] = useState<string | null>(null);
+  const [descriptionError, setDescriptionError] = useState("");
   const [directoryUsers, setDirectoryUsers] = useState<UserDirectoryItem[]>([]);
   const [userSearch, setUserSearch] = useState("");
   const [roleFilter, setRoleFilter] = useState("all");
@@ -67,6 +70,32 @@ export default function AdminDashboard() {
       setAssistantError(cause instanceof Error ? cause.message : "Assistant update failed.");
     } finally {
       setUpdatingAssistant(null);
+    }
+  }
+
+  async function saveAssistantDescription(assistant: DashboardData["assistants"][number]) {
+    const description = (descriptionDrafts[assistant.id] ?? assistant.description).trim();
+    if (description === assistant.description) return;
+    setSavingDescription(assistant.id);
+    setDescriptionError("");
+    try {
+      const response = await fetch(`/api/admin/assistants/${assistant.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ description }),
+      });
+      const payload = await response.json() as { assistant?: { description?: string }; error?: string };
+      if (!response.ok) throw new Error(payload.error || "Unable to update specialist description.");
+      const saved = payload.assistant?.description || description;
+      setData((current) => current ? {
+        ...current,
+        assistants: current.assistants.map((item) => item.id === assistant.id ? { ...item, description: saved } : item),
+      } : current);
+      setDescriptionDrafts((current) => { const next = { ...current }; delete next[assistant.id]; return next; });
+    } catch (cause) {
+      setDescriptionError(cause instanceof Error ? cause.message : "Specialist description update failed.");
+    } finally {
+      setSavingDescription(null);
     }
   }
 
@@ -259,10 +288,19 @@ export default function AdminDashboard() {
           <article className="admin-panel" id="assistants">
             <div className="admin-panel-heading"><div><span className="admin-kicker">AI WORKSPACE</span><h2>Assistant directory</h2></div><span className="admin-count">{data.assistants.length} assistants</span></div>
             <div className="admin-table-wrap"><table><thead><tr><th>Assistant</th><th>Access</th><th>Status</th></tr></thead><tbody>
-              {data.assistants.map((assistant) => <tr key={assistant.id}><td><b>{assistant.name}</b><small>{assistant.description}</small></td><td><span className={assistant.accessLevel === "restricted" ? "admin-tag restricted" : "admin-tag"}>{assistant.accessLevel}</span></td><td><span className={assistant.enabled ? "admin-status enabled" : "admin-status disabled"}>{assistant.enabled ? "Enabled" : "Disabled"}</span><button className="admin-toggle" disabled={updatingAssistant === assistant.id} onClick={() => void toggleAssistant(assistant.id, !assistant.enabled)}>{updatingAssistant === assistant.id ? "Saving…" : assistant.enabled ? "Disable" : "Enable"}</button></td></tr>)}
+              {data.assistants.map((assistant) => <tr key={assistant.id}>
+                <td>
+                  <b>{assistant.name}</b>
+                  <textarea className="admin-specialist-description" aria-label={`Description for ${assistant.name}`} maxLength={240} value={descriptionDrafts[assistant.id] ?? assistant.description} onChange={(event) => setDescriptionDrafts((current) => ({ ...current, [assistant.id]: event.target.value }))} />
+                  <div className="admin-specialist-edit"><small>{(descriptionDrafts[assistant.id] ?? assistant.description).length}/240 characters</small><button className="admin-role-save" disabled={savingDescription === assistant.id || (descriptionDrafts[assistant.id] ?? assistant.description).trim().length < 10 || (descriptionDrafts[assistant.id] ?? assistant.description).trim() === assistant.description} onClick={() => void saveAssistantDescription(assistant)}>{savingDescription === assistant.id ? "Saving…" : "Save description"}</button></div>
+                </td>
+                <td><span className={assistant.accessLevel === "restricted" ? "admin-tag restricted" : "admin-tag"}>{assistant.accessLevel}</span>{assistant.id === "security" && <small className="admin-specialist-note">Email allowlist enforced separately</small>}</td>
+                <td><span className={assistant.enabled ? "admin-status enabled" : "admin-status disabled"}>{assistant.enabled ? "Enabled" : "Disabled"}</span><button className="admin-toggle" disabled={updatingAssistant === assistant.id} onClick={() => void toggleAssistant(assistant.id, !assistant.enabled)}>{updatingAssistant === assistant.id ? "Saving…" : assistant.enabled ? "Disable" : "Enable"}</button></td>
+              </tr>)}
             </tbody></table></div>
-            {assistantError && <p className="admin-footnote">{assistantError}</p>}
-            <p className="admin-footnote">Changes are recorded in the audit log and enforced by the server.</p>
+            {assistantError && <p className="admin-footnote admin-error">{assistantError}</p>}
+            {descriptionError && <p className="admin-footnote admin-error">{descriptionError}</p>}
+            <p className="admin-footnote">Descriptions and availability changes are recorded in the audit log. Access levels are displayed read-only; Security & Intelligence remains protected by its separate server-side email allowlist.</p>
           </article>
 
           <article className="admin-panel admin-users-panel" id="users">

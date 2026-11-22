@@ -340,3 +340,14 @@ body,.shell,.sidebar,.main,.auth-shell,.admin-shell{transition:background-color 
   .admin-user-tools{align-items:stretch;flex-direction:column}
   .admin-user-tools input{width:100%;min-height:44px;font-size:14px}
 }
+
+
+/* Super-admin role controls */
+.admin-role-editor{display:flex;align-items:center;gap:5px;margin-top:7px;min-width:150px}
+.admin-role-editor select{min-width:0;max-width:116px;padding:6px 7px;border:1px solid #ffffff2b;border-radius:6px;background:#111d2d;color:#eaf2ff;font:10px 'DM Sans'}
+.admin-role-save{padding:6px 9px;border:1px solid #4d9ab2;border-radius:6px;background:#12394a;color:#c7f1fb;font:600 10px 'DM Sans';cursor:pointer}
+.admin-role-save:disabled{opacity:.4;cursor:not-allowed}
+@media(prefers-color-scheme:light){
+  .admin-role-editor select{background:#fff;border-color:#cbd5e1;color:#17253a}
+  .admin-role-save{background:#e8f5fa;color:#14516b;border-color:#a8cfdf}
+}

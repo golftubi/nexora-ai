@@ -6,7 +6,7 @@ export const dynamic = "force-dynamic";
 
 export async function GET(request: Request) {
   try {
-    const access = await requireAdmin(request);
+    const access = await requireAdmin(request, "users:read");
     if ("response" in access) return access.response;
 
     const url = new URL(request.url);

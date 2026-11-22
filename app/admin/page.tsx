@@ -4,6 +4,18 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { authClient } from "@/lib/auth-client";
 
+type UserDirectoryItem = {
+  id: string;
+  name: string | null;
+  email: string;
+  createdAt: string;
+  role: string;
+  adminActive: boolean;
+  subscriptionStatus: string;
+  planName: string;
+  conversationCount: number;
+};
+
 type DashboardData = {
   administrator: { email: string; role: string };
   metrics: {
@@ -26,6 +38,9 @@ export default function AdminDashboard() {
   const [error, setError] = useState("");
   const [updatingAssistant, setUpdatingAssistant] = useState<string | null>(null);
   const [assistantError, setAssistantError] = useState("");
+  const [directoryUsers, setDirectoryUsers] = useState<UserDirectoryItem[]>([]);
+  const [userSearch, setUserSearch] = useState("");
+  const [directoryError, setDirectoryError] = useState("");
 
   async function toggleAssistant(id: string, enabled: boolean) {
     setUpdatingAssistant(id);
@@ -68,6 +83,26 @@ export default function AdminDashboard() {
       .finally(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
   }, [isPending, session?.user?.id]);
+
+  useEffect(() => {
+    if (isPending || !session?.user) return;
+    let cancelled = false;
+    fetch("/api/admin/users?limit=200", { cache: "no-store" })
+      .then(async (response) => {
+        const payload = await response.json() as { users?: UserDirectoryItem[]; error?: string };
+        if (!response.ok) throw new Error(payload.error || "Unable to load user directory.");
+        return payload.users || [];
+      })
+      .then((users) => { if (!cancelled) setDirectoryUsers(users); })
+      .catch((cause) => { if (!cancelled) setDirectoryError(cause instanceof Error ? cause.message : "User directory failed."); });
+    return () => { cancelled = true; };
+  }, [isPending, session?.user?.id]);
+
+  const filteredUsers = directoryUsers.filter((user) =>
+    [user.name || "", user.email, user.role, user.planName].some((value) =>
+      value.toLowerCase().includes(userSearch.trim().toLowerCase())
+    )
+  );
 
   if (loading) return <main className="admin-shell"><div className="admin-loading">Loading Nexora administration…</div></main>;
 
@@ -124,13 +159,24 @@ export default function AdminDashboard() {
             <p className="admin-footnote">Changes are recorded in the audit log and enforced by the server.</p>
           </article>
 
-          <article className="admin-panel" id="users">
-            <div className="admin-panel-heading"><div><span className="admin-kicker">ACCOUNTS</span><h2>Recently registered users</h2></div></div>
-            <div className="admin-table-wrap"><table><thead><tr><th>User</th><th>Joined</th></tr></thead><tbody>
-              {data.recentUsers.map((user) => <tr key={user.id}><td><b>{user.name || "Nexora user"}</b><small>{user.email}</small></td><td>{new Date(user.createdAt).toLocaleDateString()}</td></tr>)}
-              {!data.recentUsers.length && <tr><td colSpan={2}>No registered users found.</td></tr>}
+          <article className="admin-panel admin-users-panel" id="users">
+            <div className="admin-panel-heading"><div><span className="admin-kicker">ACCOUNTS</span><h2>User management</h2></div><span className="admin-count">{directoryUsers.length} accounts loaded</span></div>
+            <div className="admin-user-tools">
+              <input aria-label="Search users" value={userSearch} onChange={(event) => setUserSearch(event.target.value)} placeholder="Search name, email, role or plan…" />
+              <span>{filteredUsers.length} matching users</span>
+            </div>
+            {directoryError && <p className="admin-footnote admin-error">{directoryError}</p>}
+            <div className="admin-table-wrap"><table><thead><tr><th>User account</th><th>Platform role</th><th>Plan</th><th>Conversations</th><th>Joined</th></tr></thead><tbody>
+              {filteredUsers.map((user) => <tr key={user.id}>
+                <td><b>{user.name || "Nexora user"}</b><small>{user.email}</small></td>
+                <td><span className={user.role === "user" ? "admin-tag" : "admin-tag restricted"}>{user.role.replace("_", " ")}</span>{user.role !== "user" && !user.adminActive && <small className="admin-error">Admin access disabled</small>}</td>
+                <td><b>{user.planName}</b><small>{user.subscriptionStatus === "none" ? "No subscription record" : user.subscriptionStatus}</small></td>
+                <td>{Number(user.conversationCount).toLocaleString()}</td>
+                <td>{new Date(user.createdAt).toLocaleDateString()}</td>
+              </tr>)}
+              {!filteredUsers.length && <tr><td colSpan={5}>No matching user accounts found.</td></tr>}
             </tbody></table></div>
-            <p className="admin-footnote">User records are read-only. Account suspension and role editing are not enabled yet.</p>
+            <p className="admin-footnote">Directory is currently read-only. Role changes and account suspension will be enabled only after server-side access enforcement is implemented.</p>
           </article>
         </section>
 

@@ -40,6 +40,8 @@ export default function AdminDashboard() {
   const [assistantError, setAssistantError] = useState("");
   const [directoryUsers, setDirectoryUsers] = useState<UserDirectoryItem[]>([]);
   const [userSearch, setUserSearch] = useState("");
+  const [roleFilter, setRoleFilter] = useState("all");
+  const [planFilter, setPlanFilter] = useState("all");
   const [directoryError, setDirectoryError] = useState("");
   const [roleDrafts, setRoleDrafts] = useState<Record<string, string>>({});
   const [savingRole, setSavingRole] = useState<string | null>(null);
@@ -138,11 +140,31 @@ export default function AdminDashboard() {
     return () => { cancelled = true; };
   }, [isPending, session?.user?.id]);
 
-  const filteredUsers = directoryUsers.filter((user) =>
-    [user.name || "", user.email, user.role, user.planName].some((value) =>
-      value.toLowerCase().includes(userSearch.trim().toLowerCase())
-    )
-  );
+  const filteredUsers = directoryUsers.filter((user) => {
+    const matchesSearch = [user.name || "", user.email, user.role, user.planName]
+      .some((value) => value.toLowerCase().includes(userSearch.trim().toLowerCase()));
+    return matchesSearch
+      && (roleFilter === "all" || user.role === roleFilter)
+      && (planFilter === "all" || user.planName === planFilter);
+  });
+
+  function exportUserDirectory() {
+    const columns = ["Name", "Email", "Role", "Plan", "Subscription status", "Conversations", "Joined"];
+    const rows = filteredUsers.map((user) => [
+      user.name || "Nexora user", user.email, user.role, user.planName,
+      user.subscriptionStatus, String(user.conversationCount), user.createdAt,
+    ]);
+    const csv = [columns, ...rows].map((row) =>
+      row.map((value) => '"' + String(value).replace(/"/g, '""') + '"').join(",")
+    ).join("\r\n");
+    const blob = new Blob(["\uFEFF", csv], { type: "text/csv;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.download = "nexora-user-directory.csv";
+    anchor.click();
+    URL.revokeObjectURL(url);
+  }
 
   if (loading) return <main className="admin-shell"><div className="admin-loading">Loading Nexora administration…</div></main>;
 
@@ -163,6 +185,13 @@ export default function AdminDashboard() {
           <div className="admin-panel-heading"><div><span className="admin-kicker">ACCOUNTS</span><h2>Registered users</h2></div><span className="admin-count">{directoryUsers.length} accounts loaded</span></div>
           <div className="admin-user-tools">
             <input aria-label="Search users" value={userSearch} onChange={(event) => setUserSearch(event.target.value)} placeholder="Search name, email, role or plan…" />
+            <select aria-label="Filter by role" value={roleFilter} onChange={(event) => setRoleFilter(event.target.value)}>
+              <option value="all">All roles</option><option value="user">General user</option><option value="admin">Admin</option><option value="support">Support</option><option value="analyst">Analyst</option><option value="super_admin">Super Admin</option>
+            </select>
+            <select aria-label="Filter by plan" value={planFilter} onChange={(event) => setPlanFilter(event.target.value)}>
+              <option value="all">All plans</option>
+              {[...new Set(directoryUsers.map((user) => user.planName))].sort().map((plan) => <option key={plan} value={plan}>{plan}</option>)}
+            </select>
             <span>{filteredUsers.length} matching users</span>
           </div>
           {directoryError && <p className="admin-footnote admin-error">{directoryError}</p>}
@@ -240,7 +269,15 @@ export default function AdminDashboard() {
             <div className="admin-panel-heading"><div><span className="admin-kicker">ACCOUNTS</span><h2>User management</h2></div><span className="admin-count">{directoryUsers.length} accounts loaded</span></div>
             <div className="admin-user-tools">
               <input aria-label="Search users" value={userSearch} onChange={(event) => setUserSearch(event.target.value)} placeholder="Search name, email, role or plan…" />
+              <select aria-label="Filter by role" value={roleFilter} onChange={(event) => setRoleFilter(event.target.value)}>
+                <option value="all">All roles</option><option value="user">General user</option><option value="admin">Admin</option><option value="support">Support</option><option value="analyst">Analyst</option><option value="super_admin">Super Admin</option>
+              </select>
+              <select aria-label="Filter by plan" value={planFilter} onChange={(event) => setPlanFilter(event.target.value)}>
+                <option value="all">All plans</option>
+                {[...new Set(directoryUsers.map((user) => user.planName))].sort().map((plan) => <option key={plan} value={plan}>{plan}</option>)}
+              </select>
               <span>{filteredUsers.length} matching users</span>
+              {data.administrator.role === "super_admin" && <button className="admin-export-button" onClick={exportUserDirectory}>Export CSV</button>}
             </div>
             {directoryError && <p className="admin-footnote admin-error">{directoryError}</p>}
             <div className="admin-table-wrap"><table><thead><tr><th>User account</th><th>Platform role</th><th>Plan</th><th>Conversations</th><th>Joined</th></tr></thead><tbody>
